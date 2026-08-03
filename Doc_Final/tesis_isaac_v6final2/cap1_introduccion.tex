@@ -1,0 +1,122 @@
+% ============================================================
+%  CAPÍTULO 1 — INTRODUCCIÓN
+% ============================================================
+\chapter{Introducción}
+
+En Colombia, las \ac{MAP} han sido responsables de miles de accidentes,
+generando miedo en las comunidades principalmente rurales y frenando su
+desarrollo productivo y social. Colombia es considerado uno de los países más
+afectados en el mundo por esta problemática: 715 municipios han sido
+contaminados con minas, aunque 523 de ellos ya han sido declarados libres
+\cite{reuters2025}. Estos dispositivos explosivos, utilizados por grupos armados
+ilegales durante décadas de conflicto, han dejado más de 12\,673 víctimas entre muertos y heridos desde 1990~\cite{aicma2026}
+. Además, la persistencia de estas
+minas en el país ha conllevado el desplazamiento y confinamiento de la población
+civil; según datos del 2023, más de 14\,700 personas tuvieron que abandonar su
+hogar temporalmente o limitar su movilidad debido a la presencia de \ac{MAP} u
+otros artefactos explosivos en su territorio \cite{eltiempo2024}. Pese a los
+avances en el posconflicto y la reducción anual de accidentes, el peligro sigue
+presente; en 2025 se registraron 136 accidentes, un incremento del 23\,\% 
+respecto al año anterior~\cite{aicma2026}.
+
+Las entidades encargadas del desminado humanitario en Colombia son
+principalmente las Fuerzas Militares (Ejército Nacional) y las \ac{OCDH},
+las cuales se rigen por la normativa técnica de la \ac{AICMA}, que usan
+tres metodologías para la eliminación de artefactos explosivos: la \ac{TDM},
+que emplea detectores de metales y herramientas especializadas; la \ac{TDC};
+y la \ac{TDEM}, destinada a la destrucción controlada de los explosivos
+localizados \cite{forero2022}. Los métodos de detección más usados incluyen
+los \ac{MD}, los \ac{GPR} --- que emiten pulsos electromagnéticos para detectar
+objetos enterrados --- y el uso de animales entrenados. Si bien estas técnicas
+han sido efectivas en muchos casos, presentan limitaciones importantes: los
+\ac{MD} son poco eficaces con minas artesanales de contenido metálico mínimo;
+los \ac{GPR} requieren operar muy cerca del terreno peligroso; y el uso de
+animales los expone a posibles detonaciones.
+
+Frente a este panorama, los trabajos previos del grupo de investigación \ac{PSI}
+de la Universidad del Valle \cite{forero2022,tenorio2024} demostraron que las
+imágenes termográficas adquiridas desde un \ac{UAV} a baja altura permiten
+detectar \ac{MAP} tipo quiebrapatas con porcentajes de éxito superiores al 88\,\%
+en condiciones controladas. El enfoque térmico, sin embargo, depende de diferencias transitorias de
+temperatura entre la mina y el suelo. Esas diferencias se ven afectadas
+por la hora del día, la humedad del suelo y la radiación solar.
+
+Las imágenes multiespectrales ofrecen una alternativa complementaria: el
+enterramiento de una \ac{MAP} perturba el suelo superficial e induce estrés
+en la vegetación circundante, generando firmas espectrales anómalas más
+persistentes que la señal térmica \cite{barnawi2022}. Frente a las imágenes
+hiperespectrales, las multiespectrales son más accesibles en costo y
+procesamiento, ya que capturan un número reducido de bandas orientadas a
+discriminar materiales de interés \cite{makki2017}.
+
+Los resultados de este trabajo respaldan esa estabilidad: el sistema
+alcanza \ac{AUC} superiores a 0.80 en sesiones capturadas en distintas
+franjas horarias ---mañana temprana, mediodía y atardecer---. El enfoque
+térmico, en cambio, requiere condiciones específicas de irradiancia y
+temperatura para generar el contraste detectable \cite{tenorio2024}.
+
+
+
+Por lo anterior, el presente trabajo propone el desarrollo de un sistema de visión
+artificial capaz de identificar \ac{MAP} enterradas superficialmente en suelo
+arenoso con vegetación limitada, a partir de imágenes multiespectrales adquiridas
+a \SI{1}{m} de altura con una cámara MicaSense RedEdge-MX de cinco bandas
+espectrales. El experimento se realizó en condiciones controladas: las minas
+emuladas (réplicas sin material explosivo) se enterraron a cuatro profundidades (1, 3, 5 y 7~cm) y en cada zona
+se dispusieron objetos de interferencia \textbf{enterrados a la misma profundidad}
+(roca, botella de vidrio y lata de aluminio) para dotar a la base de datos de
+mayor realismo de cara a trabajos futuros. El sistema implementado aborda la
+clasificación binaria \textit{mina} / \textit{no mina}.
+
+\section{Objetivos}
+
+\subsection*{Objetivo general}
+
+Desarrollar un sistema de visión artificial, capaz de identificar \ac{MAP}
+enterradas superficialmente en suelo arenoso con vegetación limitada, a partir de
+imágenes multiespectrales adquiridas a \SI{1}{m} de altura.
+
+\subsection*{Objetivos específicos}
+
+\begin{enumerate}
+  \item Construir una base de datos de imágenes multiespectrales de minas
+    enterradas en suelo real y vegetación limitada a \SI{1}{m} de altura.
+  \item Implementar técnicas de procesamiento en imágenes multiespectrales para
+    mejorar la discriminación de las \ac{MAP} respecto al resto de componentes
+    en las imágenes.
+  \item Implementar una técnica de reconocimiento de patrones para identificar la
+    presencia de una \ac{MAP}.
+  \item Establecer los alcances y limitaciones del sistema desarrollado.
+\end{enumerate}
+
+\section{Justificación}
+
+La realización de este trabajo está justificada por su importancia humanitaria,
+social y científica. En términos humanitarios, aportará al esfuerzo por reducir
+víctimas de \ac{MAP}, un problema que ha cobrado más de 12\,673 víctimas en Colombia desde 1990~\cite{aicma2026}
+. Una tecnología de detección
+remota eficaz contribuiría a salvar vidas —tanto de civiles como de operarios—
+al minimizar la necesidad de que el personal de desminado ingrese directamente
+a las áreas minadas. Asimismo, facilitar el desminado agilizará la restitución de
+tierras seguras para las comunidades rurales, permitiendo reactivar proyectos
+agrícolas y vías de comunicación en zonas que hoy permanecen improductivas
+por el temor a las minas. En línea con los compromisos del Estado colombiano y
+tratados internacionales como la Convención de Ottawa, esta iniciativa tecnológica
+sumará esfuerzos hacia la meta de un territorio libre de minas, en concordancia
+con diez de los diecisiete \ac{ODS} \cite{jodi2021}.
+
+Desde el punto de vista científico, Colombia registra 51 publicaciones sobre
+detección de \ac{MAP} en Scopus, pero ninguna de ellas emplea imágenes
+multiespectrales como técnica de detección \cite{IsaacAnteproyecto}. Este trabajo
+abre esa línea de investigación en el contexto colombiano, complementando los
+avances previos del grupo \ac{PSI} basados en termografía.
+
+\section{Estructura del documento}
+
+El Capítulo~2 revisa el estado del arte en detección de \ac{MAP} y establece
+las bases teóricas de las imágenes multiespectrales y los algoritmos de
+clasificación empleados. El Capítulo~3 describe el diseño experimental y el
+\textit{pipeline} de procesamiento, desde la captura hasta la extracción de
+características. Los resultados se presentan en el Capítulo~4, y el
+Capítulo~5 recoge las conclusiones, los alcances y limitaciones del sistema,
+y las líneas de trabajo futuro.

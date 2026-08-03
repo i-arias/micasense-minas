@@ -1,0 +1,6 @@
+criterio,k_sugerido,metricas (k de la malla)
+Tolerancia 0.005 (AUC),60,AUC=0.9437 Sens=0.819 Spec=0.882 FP/mina=4.26
+Tolerancia 0.010 (AUC),50,AUC=0.9422 Sens=0.811 Spec=0.882 FP/mina=4.30
+99.5% del AUC máximo,60,AUC=0.9437 Sens=0.819 Spec=0.882 FP/mina=4.26
+Importancia acum. 90%,235,AUC=0.9448 Sens=0.825 Spec=0.888 FP/mina=4.01
+Importancia acum. 95%,274,AUC=0.9448 Sens=0.819 Spec=0.886 FP/mina=4.10

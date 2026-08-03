@@ -1,0 +1,5 @@
+k,metodo,AUC,Sens,Spec,FP_mina
+50,XGBoost-gain,0.9422,0.811,0.882,4.3
+50,RF-Gini,0.9346,0.823,0.854,5.24
+100,XGBoost-gain,0.9474,0.828,0.888,4.0
+100,RF-Gini,0.94,0.825,0.884,4.17

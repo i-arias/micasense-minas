@@ -1,0 +1,92 @@
+# ─────────────────────────────────────────────────────────────
+#  Datos de campo (crudos, pesados — disponibles a solicitud)
+# ─────────────────────────────────────────────────────────────
+FINAL_DATASET/
+captures/
+imagenes/
+
+# Matrices de características (69 MB c/u — regenerar con thesisV2/scripts/extraccion_v2.py)
+thesisV2/resultados/features_global.csv
+thesisV2/resultados/features_ventana.csv
+tests/exploracion_objetos/
+**/features_multiclase.csv
+
+# ─────────────────────────────────────────────────────────────
+#  Figuras y salidas generadas (se reproducen con los scripts)
+# ─────────────────────────────────────────────────────────────
+thesisV2/figuras/
+FINAL_DATASET/figuras/
+
+# Pipeline original y tests — superados por thesisV2/ (se conservan en local)
+tests/
+process/clasificador_rf.py
+process/extraccion_features.py
+process/pipeline_completo.py
+process/requirements.txt
+thesisV2/PLAN_REESCRITURA.md
+
+# ─────────────────────────────────────────────────────────────
+#  Entorno / Python
+# ─────────────────────────────────────────────────────────────
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.ipynb_checkpoints/
+*.ipynb
+
+# ─────────────────────────────────────────────────────────────
+#  Binarios grandes / modelos
+# ─────────────────────────────────────────────────────────────
+*.joblib
+*.tif
+*.tiff
+
+# ─────────────────────────────────────────────────────────────
+#  Documento LaTeX: artefactos de compilación (se conserva .tex + figuras)
+# ─────────────────────────────────────────────────────────────
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+*.bcf
+*.run.xml
+Doc_Final/tesis_isaac_v6final2/main.pdf
+Doc_Final/**/*_BACKUP_*.tex
+Doc_Final/**/*.jpg
+
+# ─────────────────────────────────────────────────────────────
+#  Presentación (contiene material privado de terceros)
+# ─────────────────────────────────────────────────────────────
+Expo/
+
+# ─────────────────────────────────────────────────────────────
+#  docs/ : solo se publica el PDF de la tesis
+# ─────────────────────────────────────────────────────────────
+docs/*
+!docs/tesis.pdf
+
+# ─────────────────────────────────────────────────────────────
+#  Notas internas de trabajo (no van al repo público)
+# ─────────────────────────────────────────────────────────────
+inconsistencias.md
+correcciones_futuras.md
+instrucciones_captura.txt
+instrucciones_claude.txt
+
+# ─────────────────────────────────────────────────────────────
+#  Herramientas del agente
+# ─────────────────────────────────────────────────────────────
+.claude/

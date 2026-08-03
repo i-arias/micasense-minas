@@ -1,0 +1,753 @@
+% ============================================================
+%  CAPÍTULO 3 — DISEÑO METODOLÓGICO
+% ============================================================
+\chapter{Diseño Metodológico}
+
+En este capítulo se describe la metodología utilizada para implementar el
+sistema de detección de \ac{MAP} a partir del análisis de imágenes
+multiespectrales aéreas del suelo. El diseño abarca cuatro etapas principales:
+(1) construcción de la base de datos, (2) preprocesamiento radiométrico y
+geométrico de las imágenes, (3) extracción de características espectrales, y
+(4) clasificación y validación. La Figura~\ref{fig:pipeline_general} muestra
+el diagrama general del \textit{pipeline} implementado.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figuras/pipeline_general.png}
+  \caption{Diagrama general del sistema de detección de \ac{MAP} propuesto.
+           Las etapas se agrupan en cuatro categorías: adquisición (azul),
+           preprocesamiento (naranja), extracción de características (verde)
+           y clasificación (morado).}
+  \label{fig:pipeline_general}
+\end{figure}
+
+% -------------------------------------------------------------
+\section{Diseño del experimento}
+
+\subsection{Construcción de las minas emuladas}
+
+Para garantizar la seguridad durante la experimentación, se construyeron minas
+emuladas que replican las características espectrales y morfológicas de las
+\ac{MAP} tipo quiebrapatas, sin emplear material explosivo real. Siguiendo la
+metodología establecida en \cite{forero2022}, cada mina se fabricó con los
+siguientes componentes:
+
+\begin{itemize}
+  \item Cilindro externo de \ac{PVC} de \SI{10.2}{cm} de alto y
+    \SI{7.62}{cm} de diámetro.
+  \item \SI{400}{g} de carbón de antracita, como sustituto seguro del
+    \ac{TNT}. La Tabla~\ref{tab:tnt_carbon} resume las propiedades térmicas
+    de ambos materiales, evidenciando su similitud en calor específico y
+    conductividad térmica \cite{forero2022}.
+  \item \SI{20}{g} de clavos de acero, para simular los fragmentos metálicos
+    presentes en las minas artesanales colombianas.
+  \item Una pila de 9~V en el interior, para simular el sistema de activación
+    eléctrico de la mina quiebrapatas real (que emplea una batería de 9~V
+    como fuente de energía del detonador eléctrico). Este elemento diferencia
+    las minas emuladas de este trabajo respecto al trabajo previo del grupo
+    \ac{PSI} \cite{forero2022}, donde el detonador no incluía batería.
+\end{itemize}
+
+\begin{table}[H]
+\centering
+\caption{Propiedades térmicas del \ac{TNT} y del carbón de antracita \cite{forero2022}}
+\label{tab:tnt_carbon}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Propiedad} & \textbf{TNT} & \textbf{Carbón de antracita} \\
+\midrule
+Densidad (\si{g/cm^3})             & 1.56 & 1.37 \\
+Calor específico (\si{J/(g\cdot K)})   & 1.37 & 1.26 \\
+Conductividad térmica (\si{W/(m\cdot K)}) & 0.26 & 0.23 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+El uso del carbón de antracita como sustituto del \ac{TNT} responde a dos
+criterios. \textbf{Térmicamente}, sus propiedades similares de densidad, calor
+específico y conductividad térmica lo hacen idóneo para replicar el contraste
+infrarrojo de la mina real, siguiendo la metodología de los trabajos previos del
+grupo \ac{PSI} \cite{forero2022,tenorio2024}. \textbf{Espectralmente}, el carbón
+de antracita presenta baja reflectancia en el rango visible e infrarrojo cercano
+sin características distintivas que puedan confundirse con la vegetación
+\cite{barnawi2022}, lo que implica que el sistema no detecta el carbón directamente
+sino las anomalías espectrales que su presencia induce en el suelo y la vegetación
+circundantes --- el mecanismo central del Enfoque~B.
+
+El mecanismo de activación se emula mediante una jeringa de \SI{5}{mL}
+insertada en la tapa superior del cilindro. Al momento del enterramiento,
+la cabeza del émbolo queda expuesta sobre la superficie del suelo ---
+funcionalmente, es la parte que se pisa para activar la mina real ---,
+por lo que en la base de datos definitiva se cubre con hojas u otro material
+vegetal del entorno para evitar que sea visualmente distinguible desde la
+cámara. Esta decisión de diseño fue determinante para la base de datos definitiva,
+como se describe en la Sección~\ref{sec:iteracion_previa}.
+
+La Figura~\ref{fig:minas_simuladas} muestra las minas emuladas construidas
+para este experimento, con vista lateral y superior.
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.40\textwidth}
+    \centering
+    \includegraphics[height=6cm]{figuras/mina_lateral.png}
+    \caption{Vista lateral}
+  \end{subfigure}
+  \hspace{1cm}
+  \begin{subfigure}[b]{0.40\textwidth}
+    \centering
+    \includegraphics[height=6cm]{figuras/mina_superior.png}
+    \caption{Vista superior (tapa con cabeza de émbolo expuesta)}
+  \end{subfigure}
+  \caption{Mina emulada tipo quiebrapatas construida para el experimento.
+           Cilindro de \ac{PVC} con carbón de antracita, clavos y pila de 9~V
+           en su interior. La cabeza del émbolo de la jeringa queda expuesta
+           sobre la superficie del suelo; en la base de datos definitiva se cubre
+           con hojas del entorno para evitar su detección trivial.}
+  \label{fig:minas_simuladas}
+\end{figure}
+
+\subsection{Objetos de interferencia (potenciales falsos positivos)}
+\label{sec:objetos_interferencia}
+
+Con el propósito de dotar al experimento de mayor realismo, en cada zona de
+mina se dispusieron tres objetos de interferencia \textbf{enterrados a la
+misma profundidad que la mina correspondiente}, a \SI{20}{cm} de distancia
+del centro: una roca a la izquierda, una botella de vidrio en la parte
+superior y una lata de aluminio a la derecha. Esta distribución se mantuvo
+constante en todas las zonas  con mina y sesiones (véase Figura~\ref{fig:disposicion_zona}).
+
+Cada zona de captura cubre un área de aproximadamente \SI{60}{cm} $\times$
+\SI{60}{cm}, con la mina ubicada en el centro geométrico de la subárea.
+Los objetos de interferencia quedan a los lados, dentro del campo de visión
+de la cámara pero fuera de la región central donde se concentra la firma
+espectral de la mina.
+
+La selección de estos objetos responde a dos criterios. Primero, todos ellos
+aparecen en contextos reales de terrenos minados: rocas y objetos metálicos
+son comunes en zonas rurales colombianas. Segundo, y más importante para el
+diseño experimental, cada objeto puede generar anomalías espectrales que
+el clasificador podría confundir con una \ac{MAP}:
+
+\begin{itemize}
+  \item \textbf{Roca:} su composición mineralógica diferente al suelo circundante
+    genera una firma espectral distinta en las bandas Roja y Red Edge,
+    potencialmente similar a la perturbación del suelo sobre una mina.
+  \item \textbf{Botella de vidrio:} su alta reflectancia en el espectro visible
+    genera valores anómalos en índices como \ac{VARI} y \ac{NDRB},
+    similares a los producidos por suelo perturbado.
+  \item \textbf{Lata de aluminio:} los metales tienen reflectancia muy alta y
+    relativamente plana en todas las bandas, generando valores atípicos en
+    índices que involucran ratios entre bandas visibles e infrarrojas.
+\end{itemize}
+
+El análisis de qué fracción de los falsos positivos se asocia a estos
+objetos se presenta en la Sección~\ref{sec:analisis_fp}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.45\textwidth]{figuras/disposicion_zona.png}
+  \caption{Esquema de disposición de la mina emulada y los objetos de
+           interferencia en cada zona de captura (\SI{60}{cm} $\times$ \SI{60}{cm}).
+           La \ac{MAP} se ubica en el centro; la roca a la izquierda, la
+           botella de vidrio en la parte superior y la lata de aluminio a
+           la derecha, todos enterrados a la misma profundidad que la mina
+           y a \SI{20}{cm} del centro.}
+  \label{fig:disposicion_zona}
+\end{figure}
+
+
+\subsection{Descripción del terreno experimental}
+
+El experimento se llevó a cabo en un área verde del campus de la Universidad
+del Valle, sede Meléndez, en Santiago de Cali. El terreno seleccionado
+presenta suelo con predominio de textura arenosa y vegetación limitada,
+compuesta principalmente por gramíneas y plantas herbáceas de hoja ancha. La zona está rodeada por árboles de mediano y gran porte y
+tiene una edificación adyacente, lo que genera condiciones de sombra
+parcial en horas de la mañana temprana.
+
+El área total del terreno experimental es de aproximadamente
+\textbf{\SI{10}{m} $\times$ \SI{6}{m}}. La Figura~\ref{fig:terreno} muestra
+el área de trabajo: la vista general antes del experimento y la disposición
+de las zonas delimitadas con cinta de señalización amarilla durante una
+sesión de campo.
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figuras/terreno_general.png}
+    \caption{Vista general del área experimental}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figuras/terreno_delimitado.png}
+    \caption{Zonas delimitadas con cinta de señalización}
+  \end{subfigure}
+  \caption{Terreno experimental en el campus de la Universidad del Valle,
+           sede Meléndez. (a) Vista general con cobertura vegetal limitada, rodeada por árboles de mediano y gran porte y una
+           edificación adyacente. (b) Distribución de las doce zonas de
+           captura delimitadas con estacas y cinta amarilla.}
+  \label{fig:terreno}
+\end{figure}
+
+Previo al inicio del experimento se realizó una poda completa de la
+vegetación en toda el área de trabajo con el propósito de homogenizar
+las condiciones iniciales y garantizar vegetación limitada, en concordancia
+con el objetivo específico~1 del presente trabajo. A partir de ese momento
+no se realizó ninguna intervención adicional, permitiendo el crecimiento
+natural de la vegetación durante todo el período experimental. Las minas
+llevan aproximadamente seis meses enterradas desde el inicio del
+experimento, tiempo suficiente para que los efectos crónicos del
+enterramiento ---perturbación del suelo y posible estrés vegetal
+diferencial--- se hayan desarrollado progresivamente. Un aspecto favorable
+de este diseño es que la vegetación cubre completamente las zonas de mina,
+haciendo que los artefactos sean invisibles a simple vista, simulando
+fielmente el camuflaje natural de las \ac{MAP} en entornos reales.
+
+Para garantizar la altura y verticalidad de la captura con precisión y
+reproducibilidad entre sesiones, se diseñó e implementó una estructura de
+soporte fabricada en tubo de \ac{PVC} que posiciona la cámara a exactamente
+\SI{1}{m} sobre cada zona (véase Sección~\ref{sec:montaje}). Esta solución
+podría ser reemplazada en trabajos futuros por un \ac{UAV} volando a dicha
+altura, lo que permitiría escalar el sistema a áreas de mayor extensión.
+
+
+
+\subsection{Distribución de zonas}
+
+El área experimental de \SI{10}{m} $\times$ \SI{6}{m} se subdividió en
+doce zonas de captura distribuidas en una matriz de $6 \times 2$, como
+se muestra en la Figura~\ref{fig:distribucion_zonas}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{figuras/distribucion_zonas.png}
+  \caption{Distribución de las doce zonas de captura en el área experimental
+         de \SI{10}{m} $\times$ \SI{6}{m}, organizadas en una matriz de
+         $6 \times 2$. Cada zona cubre \SI{60}{cm} $\times$ \SI{60}{cm},
+         con la \ac{MAP} emulada ubicada en el centro geométrico. Las zonas
+         rojas contienen \ac{MAP} enterradas a distintas profundidades; las
+         azules son de control (sin mina). Cada zona de mina incluye además
+         tres objetos de interferencia enterrados a la misma profundidad
+         (véase Sección~\ref{sec:objetos_interferencia}).}
+  \label{fig:distribucion_zonas}
+\end{figure}
+
+Cada zona fue delimitada con estacas y cinta de señalización amarilla
+para garantizar la reproducibilidad de la posición de captura entre sesiones.
+
+
+
+\subsection{Iteración previa del diseño experimental}
+\label{sec:iteracion_previa}
+
+Antes de constituir la base de datos definitiva, se realizó una fase experimental
+previa que fue descartada en su totalidad. En esa iteración, las minas
+emuladas se enterraban dejando la cabeza del émbolo de la jeringa completamente blanco expuesta
+sobre la superficie del terreno durante las capturas, sin cubrirla. Este
+elemento de color blanco intenso generaba una firma espectral trivialmente
+discriminable: algoritmos de segmentación básicos como k-means identificaban
+la zona de la mina con casi el 100\,\% de exactitud, no por detectar la
+perturbación del suelo o el estrés vegetal asociados a la mina enterrada,
+sino por detectar el color blanco del émbolo en la imagen de espectro visible.
+
+La detección del émbolo visible no constituye una solución al problema
+planteado --- en una situación real, las \ac{MAP} probablemente no presentarían elementos
+tan contrastantes en superficie --- por lo que se tomó la decisión de reiniciar
+la base de datos completa, cubriendo los émbolos con hojas u otro material vegetal
+del entorno antes de cada captura, de modo que las minas emuladas no tuvieran
+ningún elemento visible que facilitara su localización trivial. Esta decisión
+está alineada con el objetivo de detectar anomalías espectrales sutiles del
+suelo y la vegetación, no elementos superficiales de alta reflectancia.
+
+Las imágenes de la iteración previa se conservan como registro, pero no
+se utilizan en ninguna etapa del análisis presentado en este trabajo.
+
+% -------------------------------------------------------------
+\section{Protocolo de adquisición de imágenes}
+
+\subsection{Sistema de soporte de la cámara}
+\label{sec:montaje}
+
+Para garantizar la altura de captura con precisión y reproducibilidad entre
+sesiones, se diseñó y construyó un sistema de soporte estacionario fabricado
+en tubo de \ac{PVC}, con forma de pórtico en H, que posiciona la cámara a
+exactamente \SI{1}{m} sobre cada zona de captura
+(véase Figura~\ref{fig:soporte}). Esta solución permitió controlar con
+precisión la altura y la verticalidad de la cámara, condiciones difíciles
+de garantizar en vuelo libre. En el futuro, la misma metodología podría
+aplicarse montando la cámara en un \ac{UAV} volando a dicha altura, lo
+que permitiría escalar el sistema a áreas de mayor extensión.
+
+% \begin{figure}[H]
+%   \centering
+%   \includegraphics[width=0.7\textwidth]{figuras/soporte_pvc.jpg}
+%   \caption{Sistema de soporte de la cámara MicaSense RedEdge-MX.
+%            Estructura de tubo PVC con soporte impreso en 3D (color morado)
+%            para fijar la cámara en posición nadir a \SI{1}{m} de altura.}
+%   \label{fig:soporte}
+% \end{figure}
+
+La cámara MicaSense RedEdge-MX se fija en el extremo horizontal del pórtico
+mediante un soporte fabricado en impresión 3D, apuntando en posición nadir
+(perpendicular al suelo). La Figura~\ref{fig:soporte} muestra el sistema completo
+durante una sesión de campo, con el panel de calibración de reflectancia
+visible en el suelo. La altura se verificó con un metro desde el nivel
+del suelo hasta los lentes de la cámara, con un margen de error de
+$\pm$\SI{3}{cm}. La verticalidad del soporte se comprobó con un nivel de
+burbuja antes de cada captura. La estructura se desplazó manualmente de zona
+en zona, reposicionándose sobre el centro de cada área delimitada.
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.52\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figuras/soporte_pvc.png}
+    \caption{Sistema de soporte en pórtico de \ac{PVC} con la cámara
+             en posición nadir. El panel \ac{CRP} se observa en el suelo.}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.42\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figuras/micasense_rededge.png}
+    \caption{Cámara MicaSense RedEdge-MX con sus cinco lentes
+             correspondientes a las bandas Blue, Green, Red,
+             Red Edge y NIR.}
+  \end{subfigure}
+  \caption{Equipo de captura multiespectral utilizado en el experimento.}
+  \label{fig:soporte}
+\end{figure}
+
+La elección de un sistema estacionario, aunque limita la movilidad en
+comparación con un \ac{UAV}, ofrece ventajas para este experimento: permite
+tiempos de captura más largos por zona, elimina la inestabilidad posicional
+causada por el viento que afecta a los drones a baja altura, y garantiza
+una altura de adquisición más consistente.
+
+\subsection{Condiciones ambientales}
+
+Las condiciones meteorológicas durante cada sesión de campo se registraron
+a partir de la estación meteorológica de la Universidad del Valle, ubicada
+en las proximidades del área de experimentación. Las variables registradas
+fueron: irradiancia solar global (\si{W/m^2}), temperatura del aire
+(\si{\celsius}), humedad relativa (\%), precipitación acumulada en las
+24~horas previas (\si{mm}) y cobertura nubosa estimada. La
+Tabla~\ref{tab:condiciones_ambientales} resume estas condiciones para cada
+sesión de captura.
+
+\begin{table}[H]
+\centering
+\caption{Condiciones ambientales registradas por sesión de captura}
+\label{tab:condiciones_ambientales}
+\begin{tabular}{ccccccc}
+\toprule
+\textbf{Sesión} & \textbf{Fecha} & \textbf{Hora} & \textbf{Rad. solar (\si{W/m^2})} &
+\textbf{Temp. (\si{\celsius})} & \textbf{HR (\%)} & \textbf{Precip. 24h (\si{mm})} \\
+\midrule
+S1            & 16 abr. & 09:44 & 620.0 & 22.4 & 90.5 & 8.0 \\
+S2            & 16 abr. & 13:10 & 778.7 & 26.4 & 72.8 & 5.2 \\
+S3            & 23 abr. & 12:34 & 346.7 & 28.2 & 60.7 & 0.0 \\
+S4            & 24 abr. & 17:21 &  64.5 & 27.5 & 61.8 & 0.0 \\
+S5            & 30 abr. & 17:17 &  73.3 & 29.2 & 63.6 & 0.0 \\
+S6            & 07 may. & 07:30 & 161.5 & 23.6 & 84.5 & 0.0 \\
+S7            & 07 may. & 16:40 & 143.9 & 29.1 & 65.5 & 0.0 \\
+\bottomrule
+\multicolumn{7}{l}{\small Todas las sesiones en 2026. S6 y S7 fueron capturadas el mismo día en horarios distintos.} \\
+\multicolumn{7}{l}{\small S1: HR=90.5\,\% y precipitación previa de 8.0~mm; no forma parte de la base de datos oficial (S2--S7).}
+\end{tabular}
+\end{table}
+
+Las condiciones ambientales registradas evidencian la variabilidad presente
+en la base de datos. La Sesión~2 fue capturada a las 13:10 con HR~=~72.8\,\%
+y precipitación previa de 5.2~mm. Las sesiones S3 a S5 registraron
+HR~$\approx$~61\,\% y precipitación nula en las 24~h previas. La Sesión~6
+fue capturada a las 07:30 con HR~=~84.5\,\% y ángulo solar rasante. La base
+de datos oficial comprende las sesiones S2--S7; la Sesión~1 se excluyó por
+sus condiciones atípicas: captura a las 09:44 con posible rocío
+(HR~=~90.5\,\%, precipitación previa de 8.0~mm), una sola zona de control
+disponible, y AUC~$\approx$~0.47 como fold de prueba ---por debajo del nivel
+de azar.
+
+\subsection{Procedimiento de captura}
+
+Para cada sesión de campo, el procedimiento de captura siguió los pasos:
+
+\begin{enumerate}
+\item \textbf{Captura del panel de calibración al inicio.} Antes de
+  recorrer las zonas, se capturó una imagen del Panel de Reflectancia
+  Calibrada (\ac{CRP}) bajo iluminación directa de sol, con la cámara
+  apuntando en posición nadir (perpendicular al suelo, apuntando
+  verticalmente hacia abajo) sobre el panel dispuesto horizontalmente
+  en el suelo, en un área adyacente a la matriz experimental
+  (Figura~\ref{fig:panel_crp}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.40\textwidth]{figuras/panel_crp.png}
+  \caption{Panel de Reflectancia Calibrada (\ac{CRP}) de MicaSense
+           utilizado para la calibración radiométrica. Sus valores de
+           albedo conocidos (Blue: 0.490, Green: 0.491, Red: 0.491,
+           Red Edge: 0.488, NIR: 0.490) permiten convertir los valores
+           digitales de cada banda a reflectancia absoluta.}
+  \label{fig:panel_crp}
+\end{figure}
+
+  \item \textbf{Captura por zona.} El soporte de \ac{PVC} se posicionó sobre
+    el centro de cada zona, se verificó la altura y la verticalidad
+    mediante nivel de burbuja, y se capturaron las cinco bandas
+    simultáneamente. El recorrido siguió un orden fijo de derecha a
+    izquierda en zigzag: primero las zonas de control
+    (CTRL\_1, CTRL\_2, CTRL\_3, CTRL\_4) y luego las zonas de mina en
+    orden decreciente de profundidad (7CM\_1, 7CM\_2, 5CM\_1, 5CM\_2,
+    3CM\_1, 3CM\_2, 1CM\_1, 1CM\_2), repitiéndose idéntico en cada sesión.
+  \item \textbf{Criterio de iluminación uniforme.} Antes de capturar cada
+    zona se verificó que toda el área estuviera bajo la misma condición de luz
+    —completamente iluminada o completamente en sombra—, evitando capturas
+    con sombras parciales que introducirían gradientes espectrales
+    artificiales. Las sombras proyectadas por el edificio adyacente en
+    determinadas horas constituían el principal riesgo de incumplimiento
+    de este criterio; por ello fue un factor considerado en la selección
+    del horario de captura.
+  \item \textbf{Captura del Panel de Reflectancia Calibrada al final.}
+  Al concluir el recorrido de todas las zonas se repite la captura del
+  Panel de Reflectancia Calibrada (\ac{CRP}), para verificar que las
+  condiciones de iluminación se mantuvieron estables durante toda la
+  sesión y para detectar posibles cambios en las condiciones de iluminación
+  comparando los valores de reflectancia del panel al inicio y al final de
+  la sesión.
+\end{enumerate}
+
+\textbf{Criterio de horario.} Las sesiones S2--S7 se capturaron en distintas
+franjas horarias ---mediodía, tarde y mañana temprana--- para
+evaluar la estabilidad del sistema ante variaciones de iluminación. El
+criterio mínimo aplicado fue evitar capturas con humedad muy alta o
+precipitación reciente: la Sesión~1, realizada a las 09:44 con
+HR~=~90.5\,\% y precipitación previa de 8.0~mm, produjo firmas espectrales
+que se apartaron significativamente del patrón del resto de sesiones, lo que
+motivó su exclusión de la base de datos oficial.
+
+\subsection{Estructura de archivos}
+
+Cada captura genera cinco archivos TIFF (uno por banda), nombrados
+\texttt{cap\_0001\_band1.tif} a \texttt{cap\_0001\_band5.tif}, organizados
+según la siguiente jerarquía:
+
+\begin{lstlisting}[language=bash, caption={Estructura del conjunto de datos}, label={lst:estructura}]
+FINAL_DATASET/
++-- SESION_N/
+|   +-- PANEL_INICIO/        # 5 TIF (panel al inicio)
+|   +-- MINA_1CM_1/          # 5 TIF por zona
+|   +-- MINA_3CM_1/ ...
+|   +-- ZONA_CONTROL/ ...
+|   +-- PANEL_FINAL/         # 5 TIF (panel al final)
+|   +-- PROCESADAS/          # generado por el pipeline
+|       +-- *_calibrado.tif
+|       +-- features_dataset.csv
++-- features_combinado.csv   # todas las sesiones combinadas
+\end{lstlisting}
+
+% -------------------------------------------------------------
+\section{Etapa 1: Preprocesamiento}
+
+El preprocesamiento consta de tres pasos: calibración radiométrica, alineación entre bandas y recorte
+de bordes.
+
+\subsection{Calibración radiométrica}
+
+La calibración radiométrica convierte los valores digitales crudos (DN) capturados
+por el sensor en reflectancia de superficie, eliminando la dependencia de las
+condiciones de iluminación entre sesiones \cite{daniels2023}. Para cada sesión
+se detecta la máscara del \ac{CRP} en la banda Roja (banda 3), que presenta el
+mayor contraste entre el panel y el fondo en este rango espectral. Dicha máscara
+se aplica a las cinco bandas para extraer los valores de DN correspondientes al
+panel. Con esos valores se aplica la Ecuación~\ref{eq:calibracion}: la
+reflectancia de cada zona se obtiene escalando sus DN por el cociente entre la
+reflectancia nominal del panel y los DN medidos sobre el panel.
+
+\textbf{Decisión técnica clave.} La detección del panel se realiza únicamente
+sobre la banda Roja porque en la banda Red Edge (banda 4), la vegetación
+circundante y el panel tienen reflectancias similares (\textasciitilde717~nm),
+lo que hace que el método de umbralización de Otsu detecte erróneamente
+el 57\,\% de la imagen como panel. Al compartir la máscara de la banda Roja
+entre todas las bandas, la irradiancia estimada de la banda Red Edge mejoró de
+191\,222 a 197\,502 y el \ac{NDRE} pasó de $-0.318$ a $-0.151$
+.
+
+\subsection{Alineación de bandas}
+
+La alineación se realiza mediante \ac{SIFT} + RANSAC, utilizando la banda Roja
+como referencia. El algoritmo detecta y empareja puntos de interés entre la imagen
+de referencia y cada una de las otras cuatro bandas, y calcula la transformación
+de perspectiva (homografía) que minimiza el error de reproyección. Como
+alternativa en caso de fallo de \ac{SIFT}, se usa el algoritmo ECC.
+
+\subsection{Recorte de bordes}
+
+La aplicación de la homografía introduce franjas de ceros en los bordes de
+la imagen resultado de la transformación de perspectiva (\textit{zero-padding}).
+Se aplicó un recorte asimétrico para eliminar dichas franjas completamente:
+
+\begin{equation}
+  \text{Recorte} = \{\text{top}: 20, \text{bottom}: 60, \text{left}: 35, \text{right}: 20\}\ \text{píxeles}
+  \label{eq:crop}
+\end{equation}
+
+Los valores mayor en el margen inferior e izquierdo obedecen a que el
+\textit{zero-padding} del \textit{warpPerspective} se concentra en esas direcciones.
+La imagen resultante tiene dimensiones aproximadas de 1185$\times$840 píxeles.
+
+% -------------------------------------------------------------
+\section{Etapa 2: Extracción de características}
+
+\subsection{Extracción mediante ventana deslizante}
+\label{sec:extraccion_parches}
+
+La localización de \ac{MAP} en la imagen se realiza mediante una ventana
+deslizante (también denominada \textit{parche}) de $128\times128$ píxeles
+con solapamiento del 50\,\%. Para una imagen de $1185 \times 840$ píxeles
+esto produce aproximadamente 216 ventanas por imagen. Cada ventana define
+una región de interés sobre la
+cual se calculan las características espectrales y estadísticas que
+conforman una muestra del conjunto de datos; el clasificador determina
+si esa región contiene o no una \ac{MAP}.
+
+
+Este enfoque de ventana deslizante define las regiones de interés sobre
+las cuales se calculan las características espectrales y estadísticas.
+A diferencia de métodos de segmentación explícita (umbralización,
+crecimiento de regiones), aquí no se delimita la región de la mina de
+forma previa --- el clasificador aprende a distinguir ventanas con mina
+de ventanas sin mina directamente a partir de las características
+extraídas. Este enfoque es adoptado en los trabajos de referencia del
+campo \cite{clark2000, silva2019}, y se justifica por las siguientes
+razones en el contexto de este proyecto:
+
+\begin{enumerate}
+  \item \textbf{Señal espectral débil con base de datos pequeño.} Los métodos de
+    segmentación basados en umbralización o regiones (Otsu, watershed, k-means)
+    requieren un contraste espectral pronunciado entre el objeto y el fondo.
+    Con la señal multiespectral de una \ac{MAP} enterrada ---que es sutil e
+    indirecta--- estos métodos generarían un número elevado de falsos positivos
+    sin poder aprender de los datos de entrenamiento.
+
+  \item \textbf{Aprovechamiento del contexto espectral.} El tamaño de
+    $128\times128$ píxeles fue elegido deliberadamente para que cada ventana
+    sea mayor que la mina, capturando tanto la zona directamente sobre el
+    artefacto como el suelo circundante. Esta información de contexto permite
+    al clasificador detectar la anomalía espectral relativa, algo que una
+    segmentación basada únicamente en el valor absoluto del píxel no podría
+    aprovechar.
+
+  \item \textbf{Compatibilidad con el esquema de etiquetado.} Las imágenes
+    fueron capturadas por zona (una imagen completa por zona de mina o control),
+    por lo que la etiqueta de cada ventana se hereda directamente de la zona de
+    origen. Esto hace que el enfoque por ventanas sea la estrategia de
+    segmentación natural para este diseño experimental.
+\end{enumerate}
+
+La forma en que se asigna esa etiqueta a cada ventana distingue los dos enfoques
+del trabajo. En el \textbf{Enfoque~A}, todas las ventanas de una imagen de zona
+de mina reciben etiqueta positiva, independientemente de si contienen la región
+exacta de la mina. En el \textbf{Enfoque~B}, descrito en la
+Sección~\ref{sec:segmentacion_groundtruth}, solo las ventanas cuyo centro cae
+dentro del bounding box anotado manualmente reciben etiqueta positiva. Ambos
+enfoques utilizan la misma estrategia de extracción por ventanas; lo que difiere
+es la precisión del groundtruth con el que se entrenan.
+
+La discriminación de \ac{MAP} frente a objetos de interferencia enterrados en
+el terreno (roca, botella de vidrio, lata de aluminio) no es un objetivo del
+presente trabajo, y queda propuesta como trabajo futuro
+(véase Sección~\ref{sec:trabajos_futuros}).
+
+\subsection{Cálculo de índices espectrales}
+
+Para cada ventana se calculan más de 40 índices espectrales agrupados en tres
+categorías: índices de vegetación (NDVI, NDRE, EVI, VARI, entre otros), índices
+de suelo (BSI, CI\_soil) e índices de ratio entre bandas (NDRB, Red/Blue,
+NIR/Red, y otros). Las ecuaciones de los índices principales se presentaron en
+la Sección~\ref{sec:indices_espectrales}.
+
+\subsection{Estadísticas por ventana}
+
+Para cada índice calculado sobre la ventana, se extraen nueve estadísticas de
+primer y segundo orden: media, mediana, desviación estándar, mínimo, máximo,
+percentiles 25 y 75, asimetría (\textit{skewness}) y curtosis. Con más de 40
+índices y 9 estadísticas cada uno, cada ventana queda representada por un vector
+de \textbf{378 características}.
+
+% ─────────────────────────────────────────────────────────────
+\section{Etapa 2b: Segmentación manual del groundtruth}
+\label{sec:segmentacion_groundtruth}
+
+\subsection{Motivación}
+
+El etiquetado automático por nombre de carpeta (Sección~\ref{sec:extraccion_parches})
+asigna la etiqueta \texttt{tiene\_mina=1} a todas las ventanas de una imagen de
+zona de mina, independientemente de si la ventana contiene o no la región exacta
+donde está enterrada la \ac{MAP}. Dado que la mina ocupa solo una fracción del
+área capturada, este etiquetado introduce ruido: ventanas que no contienen señal
+de mina reciben etiqueta positiva, lo que puede suprimir la contribución de
+bandas cuya señal es más sutil y localizada, como el \ac{NIR} y el Red Edge.
+
+Para evaluar el efecto de un etiquetado más preciso, se implementó una etapa
+de segmentación manual del groundtruth, en la que se delimita mediante un
+bounding box la región exacta de la mina en cada imagen de zona de mina.
+
+\subsection{Protocolo de anotación}
+
+En cada sesión de campo se capturan dos imágenes por zona de mina de forma
+consecutiva:
+
+\begin{enumerate}
+  \item \textbf{Imagen de referencia (UBI):} capturada con el émbolo de la
+    jeringa completamente visible sobre la superficie del suelo, lo que
+    permite identificar con precisión la posición de la mina en la imagen.
+  \item \textbf{Imagen de entrenamiento:} capturada con la zona cubierta
+    de vegetación natural, simulando la condición real de ocultamiento.
+\end{enumerate}
+
+La anotación se realizó en Roboflow usando la composición RGB (bandas 3, 2
+y 1) de cada zona como PNG, \textbf{únicamente como interfaz visual} --- la
+base de datos se genera del TIF calibrado de 5 bandas, no del PNG. Con la imagen
+UBI como referencia, se dibujó un bounding box sobre la región de la mina (clase
+\texttt{MAP}) y se exportaron las anotaciones en formato COCO JSON.
+
+\subsection{Transferencia de anotaciones al TIF calibrado}
+
+Las coordenadas del bounding box se transfieren directamente al TIF calibrado
+de 5 bandas (mismo sistema de coordenadas de píxeles). Dado que existe un
+pequeño desplazamiento entre la imagen UBI y la de entrenamiento, se aplicó
+un registro previo mediante \ac{SIFT}+RANSAC antes de usar las coordenadas.
+
+Una ventana recibe etiqueta \texttt{tiene\_mina=1} solo si su centro cae dentro
+del bounding box; de lo contrario recibe \texttt{tiene\_mina=0}, incluso si
+pertenece a una imagen de zona de mina. Con el conjunto de datos completo S2--S7 este
+etiquetado produjo 487 positivos y 14\,414 negativos (ratio 30:1).
+
+
+% -------------------------------------------------------------
+\section{Etapa 3: Clasificación}
+
+\subsection{Clasificador de desarrollo: Random Forest}
+\label{sec:clasificador_rf}
+
+Durante la fase de construcción de la base de datos (sesiones S2--S5, menos de seis
+sesiones disponibles), se utilizó el \ac{RF} como clasificador base. La elección responde a tres propiedades útiles en la etapa temprana del
+experimento:
+
+\begin{itemize}
+  \item \textbf{Robustez con datos escasos y de alta dimensionalidad.}
+    El \ac{RF} opera bien con cientos de características y pocas muestras,
+    sin requerir escalado ni selección manual de features. Eso lo hace
+    práctico para la fase exploratoria del experimento.
+  \item \textbf{Manejo nativo del desbalance de clases.} El parámetro
+    \texttt{class\_weight=`balanced'} ajusta automáticamente los pesos de
+    cada clase en proporción inversa a su frecuencia, compensando el ratio
+    de 30:1 entre ventanas negativas y positivas sin modificar la base de datos.
+  \item \textbf{Importancia de características interpretable.} La importancia
+    de Gini promediada entre árboles permite identificar qué índices
+    espectrales son más discriminativos. Fue precisamente este análisis
+    el que detectó que el Enfoque~A enmascaraba la señal de NIR y Red Edge,
+    lo que llevó al diseño del Enfoque~B.
+\end{itemize}
+
+El modelo se configuró con 100 árboles (\texttt{n\_estimators = 100}),
+\texttt{max\_depth = 10} y \texttt{class\_weight = `balanced'}.
+Una vez completada la base de datos con seis sesiones, se realizó la comparación
+formal de clasificadores descrita en la Sección~\ref{sec:comparacion_clasificadores},
+donde XGBoost emergió como el clasificador final.
+
+
+
+\subsection{Estrategia de validación LOSO}
+\label{sec:loso}
+
+La validación \ac{LOSO}, descrita en la Sección~\ref{sec:loso_teoria}, reserva
+en cada iteración $i$ una sesión $i$ completa como prueba y entrena con las
+$N-1$ restantes. Las métricas reportadas (AUC, Sensibilidad, Especificidad)
+son el promedio aritmético de los $N$ pliegues.
+La Figura~\ref{fig:loso_esquema} ilustra el esquema con los seis pliegues
+y garantiza como ningún parche de la sesión de prueba aparece durante el entrenamiento.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figuras/loso_justificacion.png}
+  \caption{Esquema \ac{LOSO} para seis sesiones (S2--S7): cada fila
+    representa un pliegue en que la sesión resaltada en rojo actúa como
+    conjunto de prueba y las demás como entrenamiento. El panel derecho
+    enumera las cuatro garantías de ausencia de fuga de datos, respaldadas
+    por la convergencia de los esquemas de validación alternativos.}
+  \label{fig:loso_esquema}
+\end{figure}
+
+\subsection{Métricas de evaluación}
+
+Se reportan las siguientes métricas: \textbf{Sensibilidad} (fracción de minas
+detectadas --- privilegiada por la asimetría de costos: una mina no detectada
+es mucho más costosa que una falsa alarma), \textbf{Especificidad} (fracción
+de parches sin mina correctamente clasificados como negativos) y \textbf{AUC}
+(área bajo la curva \ac{ROC}, independiente del umbral; 0.5 equivale a
+clasificación aleatoria, 1.0 a clasificación perfecta).
+
+% -------------------------------------------------------------
+\section{Desbalance de clases y mitigación}
+
+La configuración experimental genera una relación de 8:1 entre zonas de mina
+y zonas de control en la Sesión~1 (8 zonas de mina, 1 zona de control), lo que
+se traduce en aproximadamente la misma relación a nivel de ventanas con el
+etiquetado grueso del Enfoque~A.
+Con este nivel de desbalance, un clasificador puede alcanzar una exactitud
+aparente del 88.9\,\% simplemente prediciendo siempre la clase mayoritaria
+(mina en el Enfoque~A; control en el Enfoque~B, donde el etiquetado segmentado
+invierte la proporción a 30:1 a favor de la clase negativa), sin aprender ningún
+patrón discriminativo.
+
+Para mitigar este efecto, a partir de la Sesión~3 se capturaron cuatro zonas
+de control por sesión (relación 2:1), lo que resultó ser el factor más determinante
+en la mejora del \ac{AUC} de 0.541 a 0.731 entre las Sesiones~2 y~3.
+Adicionalmente, se utiliza el parámetro \texttt{class\_weight='balanced'} en
+el \ac{RF} para penalizar más los errores en la clase minoritaria durante
+el entrenamiento.
+
+% -------------------------------------------------------------
+\section{Base de datos completa}
+
+Al cierre del período experimental se completaron siete sesiones de campo,
+de las cuales seis conforman la base de datos oficial (S2--S7), con la Sesión~1
+excluida por sus condiciones atípicas de captura. La
+Tabla~\ref{tab:sesiones} resume las características de cada sesión.
+
+\begin{table}[H]
+\centering
+\caption{Resumen de sesiones de campo del experimento}
+\label{tab:sesiones}
+\begin{tabular}{ccccc}
+\toprule
+\textbf{Sesión} & \textbf{Zonas mina} & \textbf{Zonas control} &
+\textbf{Relación} & \textbf{AUC con LOSO (Enf. A)} \\
+\midrule
+S1 & 8 & 1 & 8:1 & 0.47* \\
+S2            & 8 & 1 & 8:1 & 0.920 \\
+S3            & 8 & 4 & 2:1 & 0.866 \\
+S4            & 8 & 4 & 2:1 & 0.809 \\
+S5            & 8 & 4 & 2:1 & 0.915 \\
+S6            & 8 & 4 & 2:1 & 0.884 \\
+S7            & 8 & 4 & 2:1 & 0.914 \\
+\bottomrule
+\multicolumn{5}{l}{\small * AUC como fold de prueba; valor consistentemente peor que el azar.} \\
+\multicolumn{5}{l}{\small AUC con LOSO por sesión: resultado al usar esa sesión como conjunto de prueba (Enfoque A); véase Tabla~\ref{tab:loso_enfoque_a}.}
+\end{tabular}
+\end{table}
+
+La base de datos oficial (S2--S7) comprende \textbf{69 capturas multiespectrales}
+(9 en S2, 12 en S3--S7), correspondientes a \textbf{345 imágenes individuales}
+(69~capturas $\times$ 5~bandas). De ellas se extrajeron \textbf{14\,901 ventanas}
+de $128\times128$ píxeles con 378 características, con un \ac{AUC}
+promedio \ac{LOSO} de \textbf{0.885~$\pm$~0.039} con el Enfoque~A y de
+\textbf{0.913~$\pm$~0.023} con el Enfoque~B (ambos con \ac{RF} como
+clasificador de referencia; el modelo final alcanza AUC~=~0.937,
+véase Capítulo~\ref{cap:resultados}).
+
+% -------------------------------------------------------------

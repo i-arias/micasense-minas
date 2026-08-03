@@ -1,0 +1,181 @@
+% ============================================================
+%  CAPÍTULO 5 — CONCLUSIONES
+% ============================================================
+\chapter{Conclusiones}
+
+En este capítulo se presentan las conclusiones del trabajo, organizadas
+por objetivo específico, seguidas de los alcances y limitaciones del sistema,
+los productos de la investigación y las líneas de trabajo futuro.
+
+% -------------------------------------------------------------
+\section{Conclusiones por objetivo}
+
+\textbf{Objetivo 1: Construcción de la base de datos.}
+Se construyó una base de datos de imágenes multiespectrales de \ac{MAP}
+emuladas enterradas en suelo arenoso con vegetación limitada a \SI{1}{m}
+de altura, siguiendo un protocolo reproducible de captura estacionaria mediante
+una estructura de soporte de \ac{PVC} diseñada para este fin. La base de datos oficial
+comprende seis sesiones de campo (S2--S7) con ocho zonas de mina por sesión
+(profundidades de 1, 3, 5 y 7~cm, con dos réplicas por profundidad) y cuatro
+zonas de control, totalizando 14\,901 ventanas. Las condiciones de iluminación resultaron ser el factor más determinante
+para la consistencia de las firmas espectrales entre sesiones: la hora de
+captura, la uniformidad de la luz y la humedad del suelo explican en gran
+medida las diferencias entre S1 y las sesiones posteriores. Esta observación
+motivó el ajuste del protocolo a partir de S2 y la exclusión de la Sesión~1
+de la base de datos oficial.
+
+\textbf{Objetivo 2: Procesamiento de imágenes multiespectrales.}
+Se implementó un \textit{pipeline} automatizado de calibración radiométrica
+mediante \ac{CRP}, alineación de bandas por \ac{SIFT}+RANSAC y extracción de
+378 características estadísticas sobre ventanas de $128\times128$ píxeles. Durante la implementación se encontró una limitación no documentada
+de la MicaSense RedEdge-MX: la umbralización de Otsu falla en la banda
+Red Edge porque la vegetación y el panel de calibración tienen reflectancias
+similares a \SI{717}{nm}. Detectar la máscara en la banda Roja y aplicarla
+a las cinco bandas resolvió el problema y mejoró la consistencia de la
+calibración radiométrica.
+
+\textbf{Objetivo 3: Reconocimiento de patrones.}
+Se evaluaron dos enfoques de etiquetado bajo validación \ac{LOSO}.
+El \textbf{Enfoque~A} (etiquetado por imagen, \ac{RF}) alcanza
+AUC~=~0.885~$\pm$~0.039, con características discriminativas exclusivamente
+del espectro visible. El \textbf{Enfoque~B} (groundtruth segmentado, 487 ventanas positivas)
+alcanzó AUC~=~0.913~$\pm$~0.023 con \ac{RF}. Además, mostró que las bandas
+\ac{NIR} y Red Edge sí contribuyen a la discriminación: en el Enfoque~A esas
+bandas quedaban enmascaradas por el etiquetado grueso de la imagen completa.
+Con las 50 características de mayor ganancia de XGBoost (undersampling 1:1
+por fold) y EasyEnsemble~x10 para el desbalance 30:1, el AUC subió a
+\textbf{0.937~$\pm$~0.019} con Sens(0.5)~=~82.3\,\%. Frente a la línea
+base (Enfoque~A, \ac{RF}, 378 características), la ganancia total es de
+$+$0.052 AUC.
+
+\textbf{Objetivo 4: Evaluación del sistema.}
+El sistema demostró capacidad de detección en todas las profundidades evaluadas.
+Las minas a \SI{1}{cm} y \SI{3}{cm} son las más detectables (AUC~=~0.946 y 0.948)
+y las de \SI{7}{cm} las menos (AUC~=~0.897), aunque todas superan ampliamente el
+nivel de azar. El rendimiento no cae monótonamente con la profundidad, resultado
+consistente con la acumulación diferencial de estrés vegetal crónico. El 85.6\,\%
+de los falsos positivos no están asociados a los objetos de interferencia dispuestos
+en el terreno, validando la especificidad espectral del clasificador frente a señales
+de perturbación de origen no explosivo.
+
+% -------------------------------------------------------------
+\section{Alcances y limitaciones}
+
+\subsection{Alcances}
+
+\begin{itemize}
+  \item El sistema detecta \ac{MAP} emuladas en suelo arenoso con vegetación limitada
+  a \SI{1}{m} de altura, con AUC con LOSO de 0.937 y Sens(0.5)~=~82.3\,\% usando
+    EasyEnsemble~x10 XGBoost, Enfoque~B y top-50 características.
+  \item El \textit{pipeline} implementado es completamente automatizable:
+    desde la captura hasta la generación del mapa de probabilidades opera
+    sin intervención manual, lo que facilita su uso en futuras campañas
+    de campo.
+  \item Se demostró que las 378 características pueden reducirse a las
+    top-50 seleccionadas por importancia de ganancia de XGBoost sin pérdida
+    de poder predictivo ($\Delta$AUC~=~$-$0.005 respecto a $k=100$), simplificando
+    el modelo y mejorando su eficiencia computacional.
+  \item El Enfoque~B con groundtruth segmentado reveló la contribución de
+    las bandas Red Edge y \ac{NIR} a la detección, información enmascarada
+    por el etiquetado grueso --- un hallazgo con valor científico
+    independiente de la métrica de exactitud.
+  \item La estrategia de validación \ac{LOSO} garantiza estimaciones de
+    rendimiento honestas y libres de fuga de datos entre sesiones.
+  \item Se construyó la primera base de datos colombiana de imágenes multiespectrales
+    de \ac{MAP} emuladas en condiciones de campo, disponible para el grupo
+    \ac{PSI} como base para trabajos futuros.
+\end{itemize}
+
+\subsection{Limitaciones}
+
+\begin{itemize}
+  \item La detección se realizó en condiciones controladas con minas emuladas.
+    La generalización a minas reales y terrenos heterogéneos requiere
+    validación adicional.
+  \item El sistema implementa clasificación binaria (\textit{mina} /
+    \textit{no mina}). La discriminación entre una \ac{MAP} y objetos de interferencia enterrados
+ ---aunque explorada en el análisis de
+    FP--- no forma parte del alcance de este trabajo.
+  \item El modelo responde a la firma espectral de estrés vegetal y
+    perturbación del suelo asociadas a la mina. Zonas con vegetación
+    naturalmente deteriorada o suelo removido por causas ajenas pueden
+    presentar firmas similares, contribuyendo a las falsas alarmas.
+  \item Las condiciones de iluminación (hora del día, nubosidad, humedad
+    residual) afectan las firmas espectrales, como evidenció la anomalía
+    de la Sesión~1. El sistema requiere un protocolo de captura estricto.
+  \item El paralaje entre los cinco lentes de la MicaSense a \SI{1}{m}
+    genera un desalineamiento residual que la homografía global no puede
+    corregir completamente sobre vegetación tridimensional.
+  \item El ratio positivos:negativos de 1:30 en el Enfoque~B limita la
+    cantidad de ventanas de mina disponibles; más sesiones o más minas
+    por sesión mejorarían la robustez del modelo.
+\end{itemize}
+
+% -------------------------------------------------------------
+\section{Productos del trabajo de investigación}
+
+A partir del desarrollo de este trabajo de grado se obtuvieron los
+siguientes productos:
+
+\begin{itemize}
+  \item \textbf{Documento de trabajo de grado.} El presente documento,
+    que constituye la memoria técnica completa del sistema desarrollado.
+
+  \item \textbf{Base de datos de imágenes multiespectrales.} Base de datos de
+    imágenes de \ac{MAP} emuladas enterradas en suelo arenoso con vegetación
+    limitada, adquiridas con la cámara MicaSense RedEdge-MX
+    a \SI{1}{m} de altura en el campus de la Universidad del Valle.
+    La base de datos incluye ocho zonas de mina por sesión (profundidades de
+    1, 3, 5 y 7~cm) y cuatro zonas de control, con seis sesiones de
+    campo bajo distintas condiciones ambientales. Disponible para el
+    grupo de investigación \ac{PSI} como base para trabajos futuros.
+
+  \item \textbf{Código fuente del \textit{pipeline} de procesamiento.}
+    Implementación completa en Python del sistema de preprocesamiento
+    radiométrico y geométrico, extracción de características espectrales
+    y clasificación con validación \ac{LOSO}. Disponible en el repositorio
+    del grupo \ac{PSI}.
+\end{itemize}
+
+% -------------------------------------------------------------
+\section{Trabajos futuros}
+\label{sec:trabajos_futuros}
+
+Con base en los resultados y limitaciones identificadas, se proponen las
+siguientes líneas de trabajo futuro:
+
+\begin{enumerate}
+  \item \textbf{Clasificación multiclase y reducción de falsos positivos.}
+    Aprovechar las anotaciones de cuatro clases (MAP, Botella, Lata, Piedra)
+    ya disponibles en la base de datos para desarrollar un clasificador capaz de
+    distinguir entre \ac{MAP}, objetos inofensivos y suelo limpio, reduciendo
+    así la tasa de falsos positivos del sistema actual.
+
+  \item \textbf{Montaje en UAV.} Escalar el sistema a un \ac{UAV} para
+    validar la operación en condiciones de vuelo real, considerando el
+    movimiento de la plataforma y su efecto sobre la alineación de bandas.
+    Los resultados del trabajo previo del grupo \ac{PSI} \cite{tenorio2024}
+    en la misma plataforma constituyen una referencia directa para este paso.
+
+  \item \textbf{Fusión de sensores.} Integrar la información multiespectral
+    con datos termográficos del enfoque previo del grupo \ac{PSI}
+    \cite{tenorio2024} para explorar si la fusión de ambas modalidades
+    ---señal crónica multiespectral y señal aguda térmica--- mejora la
+    tasa de detección y reduce los falsos positivos.
+
+  \item \textbf{Análisis de estabilidad espectral temporal.} Estudiar cómo
+    evolucionan las firmas espectrales sobre las \ac{MAP} a lo largo de
+    semanas y meses, para identificar la ventana temporal óptima de detección
+    basada en estrés vegetal crónico y determinar si el efecto aumenta,
+    se estabiliza o decrece con el tiempo.
+
+  \item \textbf{Generalización a terrenos heterogéneos.} Validar el sistema
+    en terrenos con mayor densidad vegetal, vegetación más alta, o suelos
+    con diferente textura y composición, para establecer los límites
+    operativos del enfoque multiespectral.
+
+  \item \textbf{Incertidumbre del sensor y sesgo del NDRE.} Incorporar la
+    incertidumbre de la calibración radiométrica en el análisis de resultados,
+    en particular el sesgo residual del \ac{NDRE} documentado en este trabajo,
+    para cuantificar su efecto sobre las características más discriminativas.
+\end{enumerate}

@@ -1,0 +1,118 @@
+% ============================================================
+%  ANEXOS
+% ============================================================
+
+\chapter{Especificaciones técnicas de la cámara MicaSense RedEdge-MX}
+\label{anx:camara}
+
+La Tabla~\ref{tab:specs_camara} resume las especificaciones técnicas
+principales de la cámara MicaSense RedEdge-MX empleada en este trabajo.
+
+\begin{table}[H]
+\centering
+\caption{Especificaciones técnicas de la cámara MicaSense RedEdge-MX}
+\label{tab:specs_camara}
+\begin{tabular}{ll}
+\toprule
+\textbf{Parámetro}              & \textbf{Valor} \\
+\midrule
+Número de bandas                & 5 \\
+Resolución por banda            & 1280 $\times$ 960 px (1.2 Mpx) \\
+Tamaño del sensor               & 4.8 mm $\times$ 3.6 mm \\
+Tamaño de píxel                 & 3.75 \si{\micro m} \\
+Distancia focal                 & 5.5 mm \\
+Campo de visión horizontal      & 47.2° \\
+Campo de visión vertical        & 35.4° \\
+Lentes                          & 5 objetivos físicamente separados \\
+Interfaz de captura             & API HTTP REST (\texttt{192.168.10.254}) \\
+Formato de salida               & TIFF sin comprimir (16 bits) \\
+Sensor de irradiancia           & DLS 2 (Downwelling Light Sensor) \\
+Alimentación                    & 4.2--15.8 V, consumo típico 4 W \\
+Masa                            & 232 g \\
+\midrule
+\multicolumn{2}{c}{\textit{Bandas espectrales}} \\
+\midrule
+Banda 1 — Azul (Blue)           & Centro: 475 nm, FWHM: 32 nm \\
+Banda 2 — Verde (Green)         & Centro: 560 nm, FWHM: 27 nm \\
+Banda 3 — Rojo (Red)            & Centro: 668 nm, FWHM: 16 nm \\
+Banda 4 — Red Edge              & Centro: 717 nm, FWHM: 12 nm \\
+Banda 5 — NIR                   & Centro: 842 nm, FWHM: 57 nm \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================================
+
+\chapter{Código fuente del \textit{pipeline} de procesamiento}
+\label{anx:codigo}
+
+El código fuente completo del \textit{pipeline} de preprocesamiento,
+extracción de características y clasificación está disponible en el
+repositorio del grupo de investigación \ac{PSI} de la Universidad del Valle.
+
+La Tabla~\ref{tab:scripts} describe los scripts principales que conforman
+el sistema implementado.
+
+\begin{table}[H]
+\centering
+\caption{Scripts principales del \textit{pipeline} de procesamiento}
+\label{tab:scripts}
+\small
+\begin{tabular}{p{5.0cm}p{7.5cm}}
+\toprule
+\textbf{Script} & \textbf{Descripción} \\
+\midrule
+\texttt{pipeline\_completo.py}
+  & Orquestador principal. Ejecuta las tres etapas secuencialmente para una sesión de campo. \\[4pt]
+\texttt{preprocesamiento.py}
+  & Calibración radiométrica mediante \ac{CRP}, alineación de bandas por \ac{SIFT}+RANSAC y recorte de bordes. \\[4pt]
+\texttt{extraccion\_features.py}
+  & Extracción de parches ($128\times128$~px, 50\,\% solapamiento), cálculo de 40+ índices espectrales y 9 estadísticas por índice. \\[4pt]
+\texttt{clasificador\_rf.py}
+  & Entrenamiento del \ac{RF} con validación cruzada estratificada. \\[4pt]
+\texttt{evaluar\_loso.py}
+  & Validación \ac{LOSO} con $N$ sesiones. Genera métricas por pliegue y promedio. \\[4pt]
+\texttt{extraccion\_segmentada.py}
+  & Re-etiquetado de parches usando anotaciones Roboflow (Enfoque~B). \\[4pt]
+\texttt{metricas\_modelo\_final.py}
+  & Entrenamiento y evaluación del modelo final: \ac{EasyEnsemble} x10 XGBoost,
+    top-50 características seleccionadas por XGBoost, validación \ac{LOSO}. \\[4pt]
+\texttt{micasense\_preview\_capture.py}
+  & Captura de imágenes mediante la API HTTP de la cámara MicaSense. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================================
+
+\chapter{Base de datos de imágenes multiespectrales}
+\label{anx:dataset}
+
+\noindent\textbf{Nota:} La base de datos de imágenes multiespectrales
+construida en este trabajo se encuentra disponible para el grupo de
+investigación \ac{PSI} de la Universidad del Valle. Para solicitar
+acceso, dirigirse a los directores del trabajo de grado.
+
+La Tabla~\ref{tab:estructura_dataset} resume la estructura del dataset
+al cierre del período experimental.
+
+\begin{table}[H]
+\centering
+\caption{Estructura del dataset de imágenes multiespectrales}
+\label{tab:estructura_dataset}
+\begin{tabular}{lc}
+\toprule
+\textbf{Parámetro}                      & \textbf{Valor} \\
+\midrule
+Sesiones oficiales (S2--S7)    & 6 \\
+Zonas de mina por sesión                & 8 (2 réplicas $\times$ 4 profundidades) \\
+Profundidades evaluadas                 & 1, 3, 5 y 7 cm \\
+Zonas de control por sesión (S3+)       & 4 \\
+Bandas espectrales por captura          & 5 (TIF, 16 bits por banda) \\
+Objetos de interferencia por zona       & 3 (roca, botella de vidrio, lata) \\
+Formato del dataset procesado           & CSV (un parche por fila, 378 columnas) \\
+Tamaño de parche                        & 128 $\times$ 128 px \\
+Solapamiento entre parches              & 50\,\% \\
+\bottomrule
+\end{tabular}
+\end{table}

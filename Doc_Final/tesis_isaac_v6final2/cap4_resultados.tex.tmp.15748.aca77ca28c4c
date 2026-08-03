@@ -1,0 +1,730 @@
+% ============================================================
+%  CAPÍTULO 4 — RESULTADOS Y DISCUSIÓN
+% ============================================================
+\chapter{Resultados y Discusión}
+\label{cap:resultados}
+
+En este capítulo se presentan los resultados del sistema de detección
+propuesto, organizados en dos enfoques complementarios. El
+\textbf{Enfoque~A} corresponde al etiquetado por imagen completa, donde
+toda la imagen de una zona de mina recibe etiqueta positiva. El
+\textbf{Enfoque~B} corresponde al groundtruth segmentado mediante anotación
+manual con bounding boxes, donde solo las ventanas cuyo centro cae dentro de
+la región anotada reciben etiqueta positiva. La base de datos oficial comprende las
+sesiones S2--S7 (6 sesiones, 14\,901 ventanas). La Sesión~1, capturada con
+humedad relativa del 90.5\,\% y precipitación previa de 8.0~mm, no forma
+parte de la base de datos oficial por presentar condiciones atípicas que
+generaron firmas espectrales no representativas del protocolo de captura
+establecido.
+
+Como punto de partida, la Figura~\ref{fig:firmas_espectrales} confirma que
+existe una firma espectral estadísticamente diferenciable entre ambas clases
+antes de entrenar ningún clasificador: los parches con \ac{MAP} presentan
+mayor reflectancia en las bandas visibles ---coherente con la reducción de
+cobertura vegetal sobre el suelo perturbado--- y valores significativamente
+menores en los índices NDVI y RENDVI, lo que demuestra la contribución
+discriminativa de las bandas Red Edge y \ac{NIR} de forma independiente al
+espectro visible.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figuras/firmas_espectrales.png}
+  \caption{Firma espectral promedio de los parches con \ac{MAP} y sin \ac{MAP}
+           (Enfoque~B, S2--S7). \textit{Izquierda:} reflectancia media por
+           banda espectral; los parches con mina presentan mayor reflectancia
+           en las bandas visibles y menor en Red Edge, coherente con la
+           reducción de cobertura vegetal sobre la zona perturbada.
+           \textit{Derecha:} índices espectrales derivados; NDVI y RENDVI
+           significativamente menores en parches con mina confirman la
+           contribución discriminativa de las bandas Red Edge y \ac{NIR},
+           independiente del espectro visible. Asteriscos indican
+           significancia estadística (prueba $t$, $p < 0.001$).}
+  \label{fig:firmas_espectrales}
+\end{figure}
+
+% -------------------------------------------------------------
+\section{Evolución del AUC con el número de sesiones}
+\label{sec:evolucion_auc}
+
+La Figura~\ref{fig:auc_evolucion} muestra la evolución del \ac{AUC} promedio
+en validación \ac{LOSO} a medida que se incorporaron sesiones de campo,
+comparando el Enfoque~A (etiquetado grueso, S1--S7) y el Enfoque~B
+(groundtruth segmentado, S2--S7). Ambas curvas utilizan \ac{RF} como
+clasificador de referencia para aislar el efecto del número de sesiones
+y del etiquetado; el modelo final (EasyEnsemble x10 XGBoost) se
+analiza en la Sección~\ref{sec:metricas_modelo_final}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.6\textwidth]{figuras/auc_evolucion_enfoqueB.png}
+  \caption{Evolución del \ac{AUC} promedio \ac{LOSO} con el número de
+           sesiones acumuladas (\textit{clasificador RF, como referencia}).
+           La curva naranja corresponde al Enfoque~A
+           (etiquetado grueso, sesiones S1--S7) y la curva azul al
+           Enfoque~B (groundtruth segmentado, sesiones S2--S7). El
+           Enfoque~B parte en 0.879 con dos sesiones y alcanza
+           \textbf{AUC = 0.913} (RF) con la base de datos oficial completa;
+           el modelo final (EasyEnsemble x10 XGBoost) alcanza
+           \textbf{AUC = 0.937} (Sección~\ref{sec:metricas_modelo_final}).}
+  \label{fig:auc_evolucion}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Evolución del AUC promedio con LOSO por sesiones acumuladas
+         (clasificador RF, como referencia de comparación)}
+\label{tab:evolucion_auc}
+\begin{tabular}{cccc}
+\toprule
+\textbf{N.° sesiones} & \textbf{Conjunto} &
+\textbf{AUC Enfoque A} & \textbf{AUC Enfoque B} \\
+\midrule
+2 & S1+S2 / S2+S3   & 0.541 & 0.879 \\
+3 & S1--S3 / S2--S4 & 0.731 & 0.891 \\
+4 & S1--S4 / S2--S5 & 0.782 & 0.889 \\
+5 & S1--S5 / S2--S6 & 0.792 & 0.893 \\
+6 & S1--S6          & 0.795 & ---   \\
+7 & S1--S7          & 0.829 & ---   \\
+\textbf{6 (oficial)} & \textbf{S2--S7} & \textbf{0.885} & \textbf{0.913} \\
+\bottomrule
+\multicolumn{4}{l}{\small Enfoque A: etiquetado grueso (incluye S1 en las primeras etapas; base de datos oficial S2--S7).} \\
+\multicolumn{4}{l}{\small Enfoque B: groundtruth segmentado (S2--S7).} \\
+\multicolumn{4}{l}{\small ---: la curva del Enfoque B no incluye S1; el dato oficial del Enfoque B corresponde a S2--S7.}
+\end{tabular}
+\end{table}
+La tendencia ascendente del Enfoque~B es sostenida y termina en
+\textbf{AUC = 0.913} (RF) con la base de datos oficial de seis sesiones,
+confirmando que más sesiones con condiciones homogéneas estabilizan el
+modelo. La curva del Enfoque~A, que incluye la Sesión~1 en sus primeras
+etapas, parte en 0.541 con dos sesiones y converge hacia 0.885 (RF) con la
+base de datos oficial S2--S7, mostrando una recuperación sostenida a
+medida que se añaden sesiones bajo el protocolo de captura establecido.
+El uso del \ac{RF} en esta comparación sirve para aislar el efecto de la
+cantidad de sesiones y del esquema de etiquetado; la optimización del
+clasificador se aborda en las secciones siguientes.
+
+El salto más significativo en la curva del Enfoque~A ocurrió al incorporar
+la Sesión~3 (0.541 $\to$ 0.731), coincidiendo con la introducción de cuatro
+zonas de control por sesión que redujo el desbalance de clases de 8:1 a
+2:1. Esto indica que la representatividad de la clase negativa fue el cuello
+de botella más crítico en las primeras etapas del experimento.
+
+% -------------------------------------------------------------
+\section{Enfoque A: etiquetado por imagen completa}
+\label{sec:enfoque_a}
+
+En el Enfoque~A, cada imagen de zona de mina recibe etiqueta positiva
+completa. El \ac{RF} se entrenó con las 378 características disponibles y
+se evaluó con validación \ac{LOSO} sobre la base de datos oficial S2--S7.
+
+\begin{table}[H]
+\centering
+\caption{Resultados con LOSO por sesión --- Enfoque A (etiquetado grueso, RF, S2--S7)}
+\label{tab:loso_enfoque_a}
+\small
+\begin{tabular}{cccc}
+\toprule
+\textbf{Fold} & \textbf{Entrenamiento} & \textbf{AUC} \\
+\midrule
+S2 & S3--S7 & 0.920 \\
+S3 & S2,S4--S7 & 0.866 \\
+S4 & S2--S3,S5--S7 & 0.809 \\
+S5 & S2--S4,S6--S7 & 0.915 \\
+S6 & S2--S5,S7 & 0.884 \\
+S7 & S2--S6 & 0.914 \\
+\midrule
+\textbf{Promedio} & & \textbf{0.885 $\pm$ 0.039} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Las diez características más importantes del Enfoque~A pertenecen
+exclusivamente al espectro visible (VARI\_p75 y VARI\_median encabezan la
+lista); NIR y Red Edge no aparecen. La ausencia de estas bandas llevó a
+plantear el Enfoque~B: si el etiquetado grueso incluye píxeles sin señal
+de mina, el clasificador no tiene razón para aprender de NIR ni Red Edge.
+
+% -------------------------------------------------------------
+\section{Enfoque B: groundtruth segmentado}
+\label{sec:enfoque_b}
+
+\subsection{Motivación y diseño}
+\label{sec:diseno_enfoque_b}
+
+El etiquetado por imagen completa asigna etiqueta positiva a toda la zona,
+incluidos suelo y vegetación alejados del enterramiento. El Enfoque~B
+corrige esto anotando bounding boxes directamente sobre la posición de
+cada mina, usando como referencia imágenes capturadas cuando la mina era
+aún visible.
+
+Se anotaron \textbf{56 composiciones RGB} (una por zona de mina, exportadas
+como PNG a partir de las bandas Roja, Verde y Azul del TIF calibrado) en la
+plataforma Roboflow con cuatro clases: MAP, Botella, Lata y Piedra
+(anotaciones V3 COCO). Se usó la composición RGB ---y no las cinco bandas
+por separado--- exclusivamente como interfaz de visualización para el
+anotador humano; las anotaciones resultantes se transfieren al TIF completo
+de 5 bandas para el reetiquetado de ventanas. Una ventana recibe etiqueta
+positiva solo si su centro cae dentro del bounding box de la clase MAP;
+en caso contrario recibe etiqueta negativa, incluso si pertenece a una
+imagen de zona de mina. Esto generó una base de datos de \textbf{487 ventanas
+positivas} y 14\,414 negativos (ratio 30:1), cuya distribución por sesión
+se muestra en la Tabla~\ref{tab:parches_b}.
+
+\begin{table}[H]
+\centering
+\caption{Distribución de ventanas positivas y negativas por sesión --- Enfoque B}
+\label{tab:parches_b}
+\begin{tabular}{cccc}
+\toprule
+\textbf{Sesión} & \textbf{Positivos (mina)} &
+\textbf{Negativos (control)} & \textbf{Ratio} \\
+\midrule
+S2 &  75 & 1\,869 & 25:1 \\
+S3 &  84 & 2\,508 & 30:1 \\
+S4 &  87 & 2\,505 & 29:1 \\
+S5 &  81 & 2\,510 & 31:1 \\
+S6 &  78 & 2\,512 & 32:1 \\
+S7 &  82 & 2\,510 & 31:1 \\
+\midrule
+\textbf{Total} & \textbf{487} & \textbf{14\,414} & \textbf{30:1} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Resultados con LOSO y comparación con Enfoque A}
+
+La
+Tabla~\ref{tab:loso_enfoque_b} presenta los resultados del Enfoque~B
+y la comparación directa con el Enfoque~A.
+
+\begin{table}[H]
+\centering
+\caption{Resultados con LOSO por sesión --- Enfoque A vs.\ Enfoque B (RF, S2--S7)}
+\label{tab:loso_enfoque_b}
+\begin{tabular}{cccc}
+\toprule
+\textbf{Fold test} & \textbf{Enfoque A} & \textbf{Enfoque B} &
+\textbf{$\Delta$ AUC} \\
+\midrule
+S2 & 0.920 & 0.860 & $-$0.060 \\
+S3 & 0.866 & 0.926 & $+$0.060 \\
+S4 & 0.809 & 0.900 & $+$0.091 \\
+S5 & 0.915 & 0.924 & $+$0.009 \\
+S6 & 0.884 & 0.943 & $+$0.059 \\
+S7 & 0.914 & 0.926 & $+$0.012 \\
+\midrule
+\textbf{Promedio} & \textbf{0.885} & \textbf{0.913} & \textbf{$+$0.028} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+El Enfoque~B mejora el \ac{AUC} en cuatro de las seis sesiones (con \ac{RF}
+como clasificador de referencia), con una ganancia promedio de $+$0.028.
+La varianza también baja de $\pm$0.039 a $\pm$0.023: el modelo es más
+estable entre sesiones.
+La sesión~S2 presenta una caída de $-$0.060 con el etiquetado segmentado,
+explicable por ser la sesión con menor número de ventanas positivas (75 de
+487) y una sola zona de control, lo que hace al fold más sensible a
+variaciones inter-sesión. La optimización del clasificador sobre Enfoque~B
+se presenta en las secciones~\ref{sec:comparacion_clasificadores}--\ref{sec:metricas_modelo_final},
+donde el modelo final (EasyEnsemble x10 XGBoost, top-50) alcanza
+\textbf{AUC = 0.937}.
+
+\subsection{Importancia de características --- Enfoque B}
+
+La Tabla~\ref{tab:feature_importance_b} presenta las top-10 características
+del Enfoque~B, resultado que confirma el efecto del etiquetado sobre la
+relevancia de las bandas NIR y Red Edge.
+
+\begin{table}[H]
+\centering
+\caption{Top-10 características por importancia de ganancia XGBoost (LOSO,
+         undersampling 1:1) --- Enfoque B (groundtruth segmentado, S2--S7)}
+\label{tab:feature_importance_b}
+\begin{minipage}{\textwidth}
+\centering
+\begin{tabular}{@{}cccc@{}}
+\toprule
+\textbf{\#} & \textbf{Característica} & \textbf{Banda(s)} & \textbf{Imp. media} \\
+\midrule
+1  & GRVI\_p25       & Verde/Rojo           & 0.04566 \\
+2  & Red\_mean       & Rojo                 & 0.04218 \\
+3  & NDSI\_p75       & \textbf{NIR}/Rojo    & 0.04008 \\
+4  & NIR\_Red\_p25   & \textbf{NIR}/Rojo    & 0.03910 \\
+5  & NDVI\_p25       & \textbf{NIR}/Rojo    & 0.02953 \\
+6  & Red\_std        & Rojo                 & 0.02916 \\
+7  & BSI\_p75        & \textbf{NIR}/Visible & 0.01889 \\
+8  & CI\_soil\_p75   & Rojo/Verde           & 0.01625 \\
+9  & VARI\_p25       & Visible              & 0.01541 \\
+10 & NDSI\_skewness  & \textbf{NIR}/Rojo    & 0.01329 \\
+\bottomrule
+\end{tabular}
+\vspace{4pt}
+\par\small NDSI = (Rojo $-$ NIR)/(Rojo $+$ NIR); \\ BSI = $[(Rojo+Azul)-(NIR+Verde)] / [(Rojo+Azul)+(NIR+Verde)]$.
+\end{minipage}
+\end{table}
+
+En el Enfoque~A, las top-10 características pertenecían exclusivamente al
+espectro visible (VARI, NDRB, HI). Con groundtruth segmentado,
+\textbf{el \ac{NIR} aparece en los puestos 3, 4, 5, 7 y 10} a través de
+NDSI, NIR\_Red, NDVI y BSI ---todos índices que involucran la banda de
+842~nm---. El cambio era esperado: con etiquetado grueso el clasificador
+entrena sobre toda la zona, incluidos píxeles sin señal; al restringirlo
+al bounding box, las bandas NIR y Red Edge resultan discriminativas.
+
+La variabilidad espacial (estadístico \texttt{std}) de múltiples índices
+aparece como discriminador clave --- coherente con la hipótesis de que la
+mina genera gradientes espectrales localizados, cuya variabilidad interna
+es más informativa que su valor medio absoluto.
+
+% -------------------------------------------------------------
+\section{Comparación de clasificadores y estrategia de desbalance}
+\label{sec:comparacion_clasificadores}
+
+Antes de definir el clasificador final se compararon tres arquitecturas
+sobre el Enfoque~B con las top-100 características (seleccionadas por
+\ac{RF} como línea base): \ac{RF}, XGBoost base y \ac{SVM} con kernel RBF
+(Tabla~\ref{tab:comparacion_clsif_base}). XGBoost obtuvo el AUC más alto,
+por lo que los experimentos de las secciones siguientes se centran en esa
+arquitectura.
+
+\begin{table}[H]
+\centering
+\caption{Comparación de clasificadores --- Enfoque B, top-100 features (RF-seleccionadas
+         como experimento de línea base; el modelo final usa importancia XGBoost, véase
+         Sección~\ref{sec:seleccion_features}), LOSO S2--S7}
+\label{tab:comparacion_clsif_base}
+\small
+\begin{tabular}{lc}
+\toprule
+\textbf{Clasificador} & \textbf{AUC} \\
+\midrule
+Random Forest (base)  & 0.929 $\pm$ 0.019 \\
+SVM RBF               & 0.937 $\pm$ 0.019 \\
+XGBoost base          & 0.945 $\pm$ 0.016 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+XGBoost superó a \ac{RF} en $+$0.016 AUC con menor varianza entre sesiones
+(std~=~0.016). El problema es que el XGBoost base (con
+\texttt{scale\_pos\_weight=30} para el desbalance 30:1) tiene una sensibilidad
+de apenas 0.534 a umbral~0.5, lo que exige ajuste de Youden antes de reportar
+métricas operativas. Para evitar ese ajuste se probó \textbf{EasyEnsemble~x10}:
+entrenar 10 clasificadores XGBoost, cada uno con los 487 positivos más un
+subconjunto distinto de 487 negativos (ratio~1:1), y promediar las diez
+probabilidades. Con balance~1:1 por sub-clasificador, el umbral~0.5 recupera
+su significado probabilístico sin ajuste adicional.
+
+\begin{table}[H]
+\centering
+\caption{Comparación de estrategias de desbalance --- XGBoost, Enfoque~B
+         (S2--S7), umbral fijo~=~0.5}
+\label{tab:comparacion_estrategias}
+\begin{minipage}{\textwidth}
+\centering\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Estrategia} & \textbf{AUC} & \textbf{Sens(0.5)} &
+\textbf{FPR} & \textbf{FP/mina} \\
+\midrule
+XGBoost base (scale\_pos\_weight=30)  & 0.945 & 0.534 & ---  & --- \\
+XGBoost undersampling 1:1             & 0.930 & 0.817 & 0.130 & 4.7 \\
+\textbf{EasyEnsemble~x10 XGBoost}     & \textbf{0.937} & \textbf{0.823} &
+\textbf{0.142} & \textbf{5.1} \\
+\bottomrule
+\end{tabular}
+\vspace{4pt}
+\par\small AUC: promedio LOSO; Sens/FPR: agregado sobre todos los folds.\\
+Experimento realizado con las top-50 características seleccionadas en la Sección~\ref{sec:seleccion_features}.
+\end{minipage}
+\end{table}
+
+\textbf{EasyEnsemble~x10 XGBoost es el clasificador seleccionado}: logra
+AUC~=~0.937~$\pm$~0.019 y Sens(0.5)~=~0.823 sin ajuste del umbral. Frente
+al XGBoost base, gana $+$0.289 en sensibilidad cediendo solo $-$0.008 en
+AUC; la diferencia práctica es que el umbral~0.5 ya no necesita calibración
+para ser operativo.
+
+% -------------------------------------------------------------
+\section{Selección de características}
+\label{sec:seleccion_features}
+
+Con EasyEnsemble~x10 XGBoost seleccionado, el siguiente paso fue determinar
+cuántas características usar. Se eligió una selección interna: en cada fold,
+XGBoost calcula su propia importancia de ganancia con submuestreo 1:1, y se
+retienen las $k$ de mayor valor. Al repetirse por fold se evita usar las
+importancias de un clasificador (\ac{RF}) para alimentar a otro (XGBoost).
+Se barrió $k \in \{10, 20, 50, 100, 200, 378\}$ bajo validación \ac{LOSO},
+S2--S7.
+
+\begin{table}[H]
+\centering
+\caption{Métricas con LOSO según número de características seleccionadas por XGBoost
+         --- EasyEnsemble x10, Enfoque B (S2--S7)}
+\label{tab:seleccion_features_b}
+\begin{minipage}{\textwidth}
+\centering\small
+\begin{tabular}{@{}ccccc@{}}
+\toprule
+\textbf{$k$} & \textbf{AUC} & \textbf{Sens(0.5)} & \textbf{FPR} &
+\textbf{FP/mina} \\
+\midrule
+10           & 0.900        & 0.807              & 0.156        & 5.7 \\
+20           & 0.921        & 0.842              & 0.147        & 5.2 \\
+\textbf{50}  & \textbf{0.930} & \textbf{0.840}  & \textbf{0.127} & \textbf{4.5} \\
+100          & 0.935        & 0.840              & 0.121        & 4.3 \\
+200          & 0.934        & 0.803              & 0.116        & 4.3 \\
+378          & 0.930        & 0.815              & 0.118        & 4.3 \\
+\bottomrule
+\end{tabular}
+\vspace{4pt}
+\par\small Valor obtenido en una ejecución independiente; la corrida canónica del modelo final reporta Sens~=~0.823 para $k=50$ (variabilidad estocástica del submuestreo).
+\end{minipage}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figuras/seleccion_features_xgb.png}
+  \caption{Selección de características por XGBoost + EasyEnsemble x10
+           bajo validación \ac{LOSO} (S2--S7). \textit{Izquierda:} AUC vs.\
+           número de características $k$; la curva se estabiliza en $k=50$.
+           \textit{Centro:} Sensibilidad (umbral~=~0.5) vs.\ $k$; entre
+           $k=50$ y $k=100$ la sensibilidad es idéntica (0.840).
+           \textit{Derecha:} Importancia acumulada por índice espectral
+           (top-20); los índices de la banda Roja (Red) y NIR dominan,
+           confirmando la contribución del Enfoque~B.}
+  \label{fig:seleccion_features}
+\end{figure}
+
+El \textbf{punto óptimo es $k=50$}: desde ahí la curva de AUC se aplana,
+y la Sens(0.5) entre $k=50$ y $k=100$ es idéntica (0.840), con $-$0.005
+de diferencia en AUC (Figura~\ref{fig:seleccion_features}). Pasar de 100
+a 50 características reduce el vector de entrada a la mitad sin afectar el
+rendimiento. Incluso $k=10$ supera AUC~=~0.90, lo que muestra que la señal
+espectral no está concentrada en unos pocos índices.
+
+La Figura~\ref{fig:importancia_acumulada} muestra la importancia de ganancia
+acumulada sobre las 378 características, promediada sobre los seis folds
+\ac{LOSO}. Las top-50 suman el \textbf{42.5\,\%} de la importancia total;
+a partir de $k=50$ cada característica adicional aporta menos del 0.6\,\%
+de forma individual. El panel derecho muestra esa caída claramente: la
+importancia por característica se vuelve casi plana pasado el rango~50.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figuras/importancia_acumulada.png}
+  \caption{Criterio técnico de selección por importancia acumulada ---
+           XGBoost gain, promedio \ac{LOSO} S2--S7, submuestreo~1:1.
+           \textit{Izquierda:} importancia acumulada vs.\ $k$; la línea
+           roja marca $k=50$ (42.5\,\% acumulado). Las líneas de referencia
+           indican los umbrales del 70\,\%, 80\,\%, 90\,\% y 95\,\%.
+           \textit{Derecha:} importancia individual de las top-100
+           características; la caída abrupta a partir del rango~50 confirma
+           el punto de rendimientos decrecientes.}
+  \label{fig:importancia_acumulada}
+\end{figure}
+
+% -------------------------------------------------------------
+\section{Modelo final: métricas con LOSO por fold}
+\label{sec:metricas_modelo_final}
+
+La Tabla~\ref{tab:loso_modelo_final} reporta las métricas por fold del
+modelo final (EasyEnsemble~x10 XGBoost, top-50 características) sobre
+S2--S7 a umbral~=~0.5.
+
+\begin{table}[H]
+\centering
+\caption{Métricas con LOSO por fold --- Modelo final (EasyEnsemble~x10 XGBoost,
+         top-50, Enfoque~B, S2--S7, umbral~=~0.5)}
+\label{tab:loso_modelo_final}
+\begin{minipage}{\textwidth}
+\centering\small
+\begin{tabular}{@{}lccccccccc@{}}
+\toprule
+\textbf{Fold} & \textbf{AUC} & \textbf{Sens} & \textbf{Spec} &
+\textbf{FPR} & \textbf{TP} & \textbf{FN} & \textbf{FP} & \textbf{TN} \\
+\midrule
+S2 & 0.902 & 0.827 & 0.836 & 0.164 &  62 & 13 &  307 & 1\,562 \\
+S3 & 0.927 & 0.952 & 0.592 & 0.408 &  80 &  4 & 1\,023 & 1\,485 \\
+S4 & 0.937 & 0.793 & 0.902 & 0.098 &  69 & 18 &  245 & 2\,260 \\
+S5 & 0.943 & 0.815 & 0.912 & 0.088 &  66 & 15 &  220 & 2\,290 \\
+S6 & 0.959 & 0.846 & 0.934 & 0.066 &  66 & 12 &  165 & 2\,347 \\
+S7 & 0.952 & 0.707 & 0.967 & 0.033 &  58 & 24 &   82 & 2\,428 \\
+\midrule
+\textbf{Prom.} & \textbf{0.937} & \textbf{0.823} & \textbf{0.857} &
+\textbf{0.143} & \textbf{401} & \textbf{86} & \textbf{2\,042} &
+\textbf{12\,372} \\
+Std & 0.019 & 0.080 & 0.138 & 0.138 & & & & \\
+\bottomrule
+\end{tabular}
+\vspace{4pt}
+\par\small Sens~=~sensibilidad; Spec~=~especificidad; FPR~=~tasa de falsos positivos.\\
+Fila Prom.: AUC/Sens/Spec/FPR son medias por fold; TP/FN/FP/TN son sumas acumuladas de los seis folds. $\sim$5.1~FP por mina detectada.
+\end{minipage}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.62\textwidth]{figuras/matriz_confusion_final.png}
+  \caption{Matriz de confusión del modelo final (EasyEnsemble x10
+           XGBoost, top-50, umbral~=~0.5), acumulando los seis folds
+           \ac{LOSO} (S2--S7). Los conteos se muestran con submuestreo
+           balanceado 1:1 (487 negativos de 14\,414) para facilitar la
+           comparación visual entre clases; los porcentajes corresponden
+           a la distribución real: sensibilidad~=~82.3\,\% y
+           especificidad~=~85.8\,\% (véase Tabla~\ref{tab:loso_modelo_final}).}
+  \label{fig:matriz_confusion}
+\end{figure}
+
+La sesión~S3 destaca por su alta sensibilidad (0.952, solo 4~FN) pero baja
+especificidad (0.592), lo que genera 1\,023 falsos positivos cuando S3 es el
+fold de prueba. Esto indica que el modelo entrenado sin S3 no generaliza
+completamente a las condiciones de esa sesión ---posiblemente por condiciones
+de captura específicas de ese día---. S7 presenta el patrón contrario: alta
+especificidad (0.967) pero la sensibilidad más baja (0.707, 24~FN), sugiriendo
+que las condiciones de S7 dificultan la detección de algunas minas. Los folds
+S5 y S6 muestran el balance más favorable (Sens~$>$~0.81, Spec~$>$~0.91).
+
+La Figura~\ref{fig:mapa_probabilidades} ilustra espacialmente el
+funcionamiento del modelo sobre una imagen real: la región de alta
+probabilidad coincide con la zona anotada como \ac{MAP}, confirmando
+que el sistema localiza la perturbación espectral y no produce detecciones
+aleatorias distribuidas uniformemente en la imagen.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figuras/mapa_probabilidades.png}
+  \caption{Mapa de probabilidades del modelo final (EasyEnsemble x10
+           XGBoost, top-50, umbral~=~0.5) sobre la imagen de la
+           Sesión~S5, zona \texttt{MINA\_3CM\_1}. \textit{Izquierda:}
+           imagen RGB calibrada con el bounding box de la \ac{MAP}
+           (línea verde discontinua). \textit{Derecha:} probabilidad
+           de \ac{MAP} superpuesta en escala de color; azul~=~baja
+           probabilidad, rojo~=~alta probabilidad. El modelo detecta
+           9 de 12 parches positivos (TP=9, FN=3) con 33 falsas
+           alarmas fuera de la región anotada.}
+  \label{fig:mapa_probabilidades}
+\end{figure}
+
+% -------------------------------------------------------------
+\section{Análisis de rendimiento por profundidad de enterramiento}
+\label{sec:analisis_profundidad}
+
+Para evaluar el efecto de la profundidad de enterramiento sobre la
+detectabilidad de las \ac{MAP}, se utilizó el modelo final entrenado sobre
+todas las profundidades (EasyEnsemble~x10 XGBoost, top-50, umbral~=~0.5)
+y se calculó el \ac{AUC} por fold \ac{LOSO} de forma independiente para
+cada subconjunto de parches de una misma profundidad (1, 3, 5 y 7~cm).
+Esta evaluación refleja el rendimiento real del clasificador desplegado
+frente a minas de distinta profundidad, sin reentrenar el modelo.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.88\textwidth]{figuras/auc_vs_profundidad.png}
+  \caption{Rendimiento del modelo final (EasyEnsemble~x10 XGBoost,
+           top-50, Enfoque~B) por profundidad de enterramiento. La línea
+           negra sólida representa el \ac{AUC} promedio \ac{LOSO}; las
+           líneas de colores corresponden a cada sesión individual. La
+           banda gris indica el intervalo de un desvío estándar.}
+  \label{fig:auc_profundidad}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Métricas con LOSO por profundidad de enterramiento ---
+         EasyEnsemble~x10 XGBoost, top-50, Enfoque B (S2--S7),
+         umbral~=~0.5}
+\label{tab:auc_profundidad}
+\small
+\begin{tabular}{cccccccccc}
+\toprule
+\textbf{Prof.} &
+\textbf{S2} & \textbf{S3} & \textbf{S4} & \textbf{S5} &
+\textbf{S6} & \textbf{S7} & \textbf{AUC} & \textbf{Sens} & \textbf{FPR} \\
+\midrule
+\SI{1}{cm} & 0.938 & 0.973 & 0.897 & 0.983 & 0.924 & 0.962
+  & 0.946$\pm$0.030 & 0.833 & 0.109 \\
+\SI{3}{cm} & 0.911 & 0.989 & 0.952 & 0.965 & 0.986 & 0.883
+  & \textbf{0.948}$\pm$0.039 & 0.786 & 0.105 \\
+\SI{5}{cm} & 0.722 & 0.979 & 0.973 & 0.951 & 0.968 & 0.955
+  & 0.925$\pm$0.091 & 0.795 & 0.095 \\
+\SI{7}{cm} & 0.971 & 0.864 & 0.897 & 0.861 & 0.819 & 0.967
+  & 0.897$\pm$0.056 & 0.764 & 0.117 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Las minas a \SI{1}{cm} y \SI{3}{cm} presentan el mayor AUC (0.946 y 0.948
+respectivamente), con una diferencia no significativa dado el solapamiento
+de sus intervalos de confianza. La sensibilidad más alta pertenece a \SI{1}{cm}
+(Sens~=~0.833), coherente con la física del problema: a menor profundidad, mayor
+perturbación del suelo superficial y mayor estrés inducido en la vegetación
+\cite{qiu2023}.
+
+El rendimiento no cae de forma monótona con la profundidad. Las minas a
+\SI{5}{cm} (AUC~=~0.925) presentan la mayor varianza del experimento
+(std~=~0.091), con el fold S2 como caso atípico (AUC~=~0.722) —sesión con
+menor número de parches positivos—. Las minas a \SI{7}{cm} son las menos
+detectables (AUC~=~0.897~$\pm$~0.056), aunque permanecen considerablemente
+por encima del nivel de azar (AUC~=~0.50) en todos los folds.
+
+Los falsos negativos del modelo se distribuyen de forma heterogénea entre
+profundidades: las minas a \SI{7}{cm} presentan la sensibilidad más baja
+(Sens~=~0.764), frente al 0.833 de las minas a \SI{1}{cm}
+(Tabla~\ref{tab:auc_profundidad}). Esta tendencia es consistente con la
+física del problema: a mayor profundidad de enterramiento, la perturbación
+del suelo superficial y el estrés inducido en la cobertura vegetal son menos
+intensos, atenuando las firmas espectrales que el modelo utiliza para la
+detección~\cite{qiu2023}.
+
+% -------------------------------------------------------------
+\section{Análisis de falsos positivos vs objetos de interferencia}
+\label{sec:analisis_fp}
+
+Con el fin de determinar si los objetos de interferencia dispuestos en el
+terreno (botella de vidrio, lata de aluminio y piedra, todos enterrados a
+la misma profundidad que la mina correspondiente) generan confusión en el
+clasificador, se realizó un análisis espacial de los falsos positivos del
+Enfoque~B sobre las 48 zonas de mina de la base de datos completa
+(6 sesiones~$\times$~8 zonas). Se identificaron las ventanas fuera del
+bounding box de la \ac{MAP} con $P(\text{mina}) > 0.5$ y se determinó si
+su centro se encontraba a $\leq$30~px de algún objeto anotado.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.6\textwidth]{figuras/ejemplo_fp.png}
+  \caption{Ejemplo representativo del análisis de falsos positivos:
+           Sesión~3, mina a 5~cm de profundidad. En verde: bounding
+           box de la \ac{MAP}. En naranja discontinuo: bounding box de
+           la piedra. En azul discontinuo: región de botella. En amarillo
+           discontinuo: lata. Los puntos rojos sólidos indican FP cercanos
+           a algún objeto de interferencia ($\leq$30~px); los puntos rosa
+           claro son FP aislados. De los 14~FP totales, 6 están cerca de
+           objetos y 8 corresponden a ruido estructural del suelo y la
+           vegetación.}
+  \label{fig:ejemplo_fp}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Análisis de falsos positivos vs objetos de interferencia ---
+         EasyEnsemble~x10 XGBoost, top-50, Enfoque B (S2--S7, 48 zonas de mina),
+         umbral~=~0.5}
+\label{tab:falsos_positivos}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Métrica} & \textbf{Valor} & \textbf{Porcentaje} \\
+\midrule
+Total FP en zonas de mina (48 zonas, S2--S7) & 1\,577 & 100\,\% \\
+FP cerca de algún objeto ($\leq$30~px)        & 227    & 14.4\,\% \\
+FP \textbf{no} cercanos a objeto              & 1\,350 & \textbf{85.6\,\%} \\
+\midrule
+FP cerca de Botella                           & 111    & \\
+FP cerca de Lata                              & 65     & \\
+FP cerca de Piedra                            & 51     & \\
+\midrule
+Sesión con más FP totales    & S3 (693,  126 cerca de objeto) & \\
+Sesión con menos FP totales  & S7 (75,    2 cerca de objeto)  & \\
+\bottomrule
+\multicolumn{3}{l}{\small Los FP incluyen parches de todas las zonas de mina fuera del bbox MAP con $P>0.5$.} \\
+\multicolumn{3}{l}{\small El mayor número absoluto respecto al modelo base refleja la mayor sensibilidad del} \\
+\multicolumn{3}{l}{\small EasyEnsemble (ratio positivos:negativos 1:1 en cada sub-clasificador).} \\
+\end{tabular}
+\end{table}
+
+Nótese que los 1\,577~FP de esta tabla corresponden únicamente a las \textbf{zonas de mina}
+(parches fuera del bbox MAP con predicción positiva); los 2\,042~FP totales reportados en la
+Tabla~\ref{tab:loso_modelo_final} incluyen además los falsos positivos generados en las
+zonas de control de cada sesión.
+
+El resultado más relevante es que el \textbf{85.6\,\% de los falsos positivos
+no están asociados a los objetos de interferencia}, lo que descarta que la
+botella, la lata o la piedra generen firmas espectrales sistemáticamente
+confundibles con las de la \ac{MAP}. La mayoría de los FP corresponden a
+variaciones naturales del suelo y la vegetación dentro de la zona de mina —
+resultado esperado dado que la perturbación del suelo por enterramiento tiene
+bordes difusos que se extienden más allá del bounding box.
+
+La Botella es el objeto que más contribuye a FP cercanos (111 de 227),
+seguida de la Lata (65) y la Piedra (51). La Sesión~3 concentra el mayor
+número de FP absolutos (693), lo cual es consistente con su especificidad más
+baja (FPR~=~0.408 cuando S3 es el fold de prueba, ver
+Tabla~\ref{tab:loso_modelo_final}). La Sesión~7 registra los menos (75),
+coherente con su alta especificidad (FPR~=~0.033).
+
+% -------------------------------------------------------------
+\section{Discusión general}
+\label{sec:discusion}
+
+La Tabla~\ref{tab:resumen_final} sintetiza los resultados principales
+del sistema propuesto.
+
+\begin{table}[H]
+\centering
+\caption{Resumen de la progresión metodológica y métricas del sistema de
+         detección propuesto (S2--S7, umbral~=~0.5)}
+\label{tab:resumen_final}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Configuración} & \textbf{AUC con LOSO} & \textbf{Sens(0.5)} \\
+\midrule
+Enfoque A --- RF, 378 features                              & 0.885 $\pm$ 0.039 & --- \\
+Enfoque B --- RF, 378 features                              & 0.913 $\pm$ 0.023 & --- \\
+\textbf{Enfoque B --- EasyEnsemble~x10 XGBoost, top-50}     &
+  \textbf{0.937 $\pm$ 0.019} & \textbf{0.823} \\
+\midrule
+Profundidad más detectable    & \multicolumn{2}{c}{\SI{3}{cm} (AUC~=~0.948)} \\
+Profundidad menos detectable  & \multicolumn{2}{c}{\SI{7}{cm} (AUC~=~0.897)} \\
+Features óptimas (Enfoque B)  & \multicolumn{2}{c}{50 de 378}                \\
+FP/mina detectada             & \multicolumn{2}{c}{$\sim$5.1}                \\
+FP asociados a interferencias & \multicolumn{2}{c}{14.4\,\%}                 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+El sistema alcanza un \textbf{AUC con LOSO de 0.937 con EasyEnsemble~x10
+XGBoost} sobre el Enfoque~B con las top-50 características seleccionadas
+por el propio XGBoost. En total, los tres ajustes metodológicos ---Enfoque~B, EasyEnsemble y
+selección de características por XGBoost--- suman $+$0.052 AUC sobre
+la línea base del Enfoque~A con RF (0.885).
+
+\textbf{Justificación del AUC y métricas complementarias.}
+El \ac{AUC} se eligió como métrica principal porque mide la capacidad
+discriminativa sin depender del umbral. Eso permite comparar distintas
+arquitecturas en igualdad de condiciones. La sensibilidad a umbral
+fijo~(0.5) se reporta además como métrica operativa. EasyEnsemble lo hace
+posible: cada sub-clasificador se entrena con ratio~1:1 y el promedio de
+diez probabilidades devuelve al umbral~0.5 su significado probabilístico
+directo, sin necesidad de ajuste tipo Youden. Con umbral~=~0.5, el sistema
+detecta el \textbf{82.3\,\%} de las minas (especificidad de 0.857,
+Tabla~\ref{tab:loso_modelo_final}). En detección de minas, perder una mina
+es más grave que una falsa alarma; bajar el umbral por debajo de 0.5 aumenta
+la cobertura a costa de más alarmas. En cuanto al tiempo de procesamiento,
+el \textit{pipeline} completo ---calibración radiométrica, alineación de
+bandas, extracción de características e inferencia--- tarda entre 5
+y~8 minutos por sesión en un computador de propósito general, suficiente
+para análisis post-captura en campo.
+
+\subsection{Relación con el trabajo previo del grupo PSI}
+
+El trabajo de Tenorio \etal{} \cite{tenorio2024} constituye el antecedente
+directo de esta investigación dentro del grupo \ac{PSI}: empleó termografía
+infrarroja para detectar \ac{MAP} tipo quiebrapatas con un clasificador
+\ac{MLP} sobre imágenes adquiridas con \ac{UAV}, reportando una exactitud
+del 92.13\,\% y una sensibilidad del 82.4\,\%.
+
+Los dos enfoques no son equivalentes: operan sobre fenómenos físicos
+distintos. El termográfico registra diferencias de temperatura agudas entre
+la mina y el suelo, y funciona en una ventana temporal de pocas horas bajo
+condiciones específicas de irradiancia. El multiespectral, en cambio,
+captura el estrés vegetal y la perturbación del suelo que se acumulan semanas
+después del enterramiento; dentro de un rango horario apropiado, la señal
+es relativamente estable.
+
+La comparación numérica es directa: Tenorio~\etal{} reportaron resultados
+a umbral~0.5, y EasyEnsemble permite al presente sistema operar en las mismas
+condiciones sin ajuste. La sensibilidad obtenida (82.3\,\%) prácticamente
+coincide con la de Tenorio~\etal{} (82.4\,\%), con AUC~=~0.937 como indicador
+adicional independiente del umbral. Fusionar ambos sensores es una línea de
+trabajo natural para el grupo.

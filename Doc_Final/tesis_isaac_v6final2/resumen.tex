@@ -1,0 +1,115 @@
+% ============================================================
+%  RESUMEN
+% ============================================================
+\chapter*{Resumen}
+\addcontentsline{toc}{chapter}{Resumen}
+\thispagestyle{plain}
+
+Las minas antipersona~(MAP) constituyen una de las amenazas humanitarias más
+persistentes en Colombia, país que registra más de 12\,673 víctimas entre 1990 y 2026~\cite{aicma2026}.
+Las técnicas de detección convencionales ---detectores de metales, radares de
+penetración terrestre y perros entrenados--- presentan limitaciones críticas frente
+a minas de fabricación artesanal con contenido metálico mínimo o nulo, además de
+exponer al personal operativo a riesgos directos. Este trabajo de grado desarrolla
+un sistema de visión artificial basado en imágenes multiespectrales adquiridas
+a \SI{1}{m} de altura, para la detección remota de \ac{MAP} tipo quiebrapatas
+enterradas superficialmente en suelo arenoso con vegetación limitada.
+
+El sistema utiliza una cámara MicaSense RedEdge-MX de cinco bandas espectrales
+(\SI{475}{nm}, \SI{560}{nm}, \SI{668}{nm}, \SI{717}{nm} y \SI{842}{nm}). Antes de
+cada sesión de campo se captura un panel de reflectancia calibrada (CRP) que permite
+convertir en el procesamiento posterior, los valores digitales de cada banda en
+valores de reflectancia de superficie independientes de las condiciones de iluminación.
+La base de datos comprende seis sesiones de campo (S2--S7, 14\,901 ventanas)
+adquiridas en distintas condiciones ambientales, con validación
+\textit{Leave-One-Session-Out}~(LOSO) para evitar fuga de datos entre sesiones; un
+experimento complementario que deja fuera cada emplazamiento físico
+(\textit{leave-one-zone-out}) confirma que el modelo generaliza a minas en sitios no vistos.
+Se emplean cuatro métricas: el \ac{AUC} ---área bajo la curva ROC--- como métrica
+principal, por medir la capacidad discriminativa de forma independiente del umbral
+y permitir comparar arquitecturas en igualdad de condiciones; y, a umbral fijo~(0.5),
+la sensibilidad (fracción de minas detectadas), la especificidad (fracción de
+no-minas correctas) y los falsos positivos por mina, como métricas operativas.
+Debido al desbalance 30:1, el entrenamiento emplea submuestreo aleatorio~1:1
+(EasyEnsemble promedia diez sub-clasificadores balanceados 1:1), lo que permite
+reportar correctamente esas métricas operativas a umbral~0.5.
+
+El etiquetado del groundtruth se realizó por anotación manual con bounding box en
+Roboflow: una ventana es positiva solo si su centro cae dentro del recuadro de la
+\ac{MAP}, lo que produjo 487 ventanas positivas frente a 14\,414 negativas
+(desbalance 30:1). El análisis de importancia mostró que las bandas Red Edge y \ac{NIR} aportan a
+la discriminación; la selección final de características se realizó con la ganancia
+del propio XGBoost, evitando la inconsistencia de usar las importancias de un
+clasificador para alimentar otro. Tras comparar \textit{Random Forest},
+\ac{SVM}, XGBoost y EasyEnsemble, el modelo final ---\textbf{EasyEnsemble~x10
+XGBoost} con las \textbf{70 características} de mayor ganancia--- alcanza
+AUC~=~$0.947 \pm 0.007$, con sensibilidad del \textbf{82.3~\%} a umbral~0.5,
+comparable con los trabajos previos del grupo \ac{PSI} en termografía infrarroja
+(82.4~\%). El análisis por profundidad muestra que la sensibilidad disminuye al
+aumentar la profundidad (del 87.5~\% a \SI{1}{cm} al 70.7~\% a \SI{7}{cm}),
+coherente con que la señal proviene de la perturbación superficial. El análisis de
+falsos positivos muestra que la botella de vidrio es el objeto que más confusión
+genera, aunque el \textbf{93~\%} de los falsos positivos en zonas de mina no se
+asocian a ningún objeto de interferencia, sino al suelo perturbado alrededor de la mina.
+
+\vspace{6pt}
+\noindent\textbf{Palabras clave:} visión artificial; minas antipersona; imágenes
+multiespectrales; Red Edge; infrarrojo cercano; estrés vegetal; XGBoost; bosque
+aleatorio; validación LOSO.
+
+\clearpage
+
+% ============================================================
+%  ABSTRACT
+% ============================================================
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+\thispagestyle{plain}
+
+Anti-personnel landmines~(APL) remain one of the most persistent humanitarian threats
+in Colombia, a country that has recorded more than 12,673 victims between 1990 and 2026~\cite{aicma2026}
+. Conventional detection techniques ---metal detectors, ground-penetrating radars,
+and trained dogs--- exhibit critical limitations when applied to artisanal mines with
+minimal or no metallic content, while also exposing field personnel to direct risks.
+This thesis develops a computer vision system based on multispectral imagery acquired
+at \SI{1}{m} height for the remote detection of shallow-buried legbreaker APL in sandy
+soil with limited vegetation.
+
+The system uses a MicaSense RedEdge-MX five-band camera (\SI{475}{nm}, \SI{560}{nm},
+\SI{668}{nm}, \SI{717}{nm}, and \SI{842}{nm}). Before each field session, a Calibrated
+Reflectance Panel~(CRP) is captured to allow the subsequent processing to convert the
+digital values of each band into surface reflectance values independent of illumination
+conditions. The official dataset comprises six field sessions (S2--S7, 14,901 patches)
+acquired under varying environmental conditions, with Leave-One-Session-Out~(LOSO)
+validation to prevent data leakage between sessions; a complementary leave-one-zone-out
+experiment confirms that the model generalizes to mines at unseen sites. Four metrics are used: the \ac{AUC} ---area under the ROC curve--- as the primary
+metric, for measuring discriminative capacity independently of the threshold and
+enabling fair comparison of architectures; and, at a fixed threshold~(0.5),
+sensitivity (fraction of mines detected), specificity (fraction of non-mines
+correctly classified) and false positives per mine, as operational metrics. Due to
+the 30:1 imbalance, training uses random 1:1 undersampling (EasyEnsemble averages
+ten 1:1-balanced sub-classifiers), which allows these operational metrics to be
+reported correctly at the 0.5 threshold.
+
+Groundtruth labeling was performed by manual bounding-box annotation in Roboflow:
+a window is positive only if its center falls inside the \ac{MAP} box, yielding 487
+positive windows against 14,414 negatives (30:1 imbalance). The importance analysis showed that the Red Edge and Near-Infrared~(NIR) bands
+contribute to discrimination; final feature selection used XGBoost's own gain importance,
+avoiding the inconsistency of using one classifier's importances to feed another. After comparing
+\textit{Random Forest}, \ac{SVM}, XGBoost, and EasyEnsemble, the final model
+---\textbf{EasyEnsemble~x10 XGBoost} with the \textbf{top-70 features} by gain---
+achieves AUC~=~$0.947 \pm 0.007$, with \textbf{82.3~\%} sensitivity at a 0.5
+threshold, comparable with previous work by the PSI research group using infrared
+thermography (82.4~\%). Depth analysis shows that sensitivity decreases with burial
+depth (from 87.5~\% at 1~cm to 70.7~\% at 7~cm), consistent with a signal
+originating from the surface perturbation. The false-positive analysis shows that
+the glass bottle is the object generating the most confusion, although \textbf{93~\%}
+of false positives in mine zones are not associated with any interference object but with
+the disturbed soil around the mine.
+
+\vspace{6pt}
+\noindent\textbf{Keywords:} computer vision; anti-personnel landmines; multispectral
+imaging; Red Edge; near-infrared; vegetation stress; XGBoost; random forest;
+LOSO validation.
+
+\clearpage

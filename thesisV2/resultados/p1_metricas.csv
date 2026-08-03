@@ -1,0 +1,3 @@
+modo,AUC,AUC_std,Sens,Spec,FP_mina
+ventana,0.915,0.023,0.805,0.856,5.29
+global,0.915,0.023,0.805,0.856,5.29
